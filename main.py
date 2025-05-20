@@ -48,7 +48,12 @@ class YOLODetectionUI(QMainWindow):
         self.current_image = None
         self.current_result = None
         self.video_writer = None
-        self.output_path = "output"
+
+        # 设置项目路径
+        self.project_root = os.path.dirname(os.path.abspath(__file__))
+        self.models_path = os.path.join(self.project_root, "models")
+        self.results_path = os.path.join(self.project_root, "results")
+        self.output_path = os.path.join(self.project_root, "results")
 
         # 创建输出目录
         if not os.path.exists(self.output_path):
@@ -144,7 +149,13 @@ class YOLODetectionUI(QMainWindow):
 
         # 模型选择
         self.model_combo = QtWidgets.QComboBox()
-        self.model_combo.addItems(["best.pt"])
+
+        # 从models目录加载模型文件
+        model_files = self.get_model_files()
+        if model_files:
+            self.model_combo.addItems(model_files)
+        else:
+            self.model_combo.addItems(["yolov8s-seg.pt"])
         self.model_combo.setCurrentIndex(0)
 
         # 加载模型按钮
@@ -344,11 +355,29 @@ class YOLODetectionUI(QMainWindow):
         self.iou_slider.valueChanged.connect(self.update_iou_value)
         self.timer.timeout.connect(self.update_camera_frame)
 
+    def get_model_files(self):
+        """获取models目录下的模型文件"""
+        model_files = []
+        if os.path.exists(self.models_path):
+            for file in os.listdir(self.models_path):
+                if file.endswith('.pt'):
+                    model_files.append(file)
+        return model_files
+
     def load_model(self):
         """加载YOLO模型"""
         model_name = self.model_combo.currentText().split(" ")[0]
+        model_path = os.path.join(self.models_path, model_name)
+
         try:
-            self.model = YOLO(model_name)
+            # 检查模型文件是否存在
+            if not os.path.exists(model_path):
+                # 如果模型文件不在models目录中，尝试直接加载（可能是相对路径或绝对路径）
+                self.model = YOLO(model_name)
+            else:
+                # 从models目录加载模型
+                self.model = YOLO(model_path)
+
             self.statusbar.showMessage(f"模型 {model_name} 加载成功", 3000)
             self.image_btn.setEnabled(True)
             self.video_btn.setEnabled(True)
@@ -384,7 +413,7 @@ class YOLODetectionUI(QMainWindow):
 
         if hasattr(result, 'boxes') and result.boxes is not None:
             boxes = result.boxes
-            for i, box in enumerate(boxes):
+            for _, box in enumerate(boxes):  # 使用_忽略索引变量
                 class_id = int(box.cls.item())
                 conf = float(box.conf.item())
                 x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
@@ -466,9 +495,14 @@ class YOLODetectionUI(QMainWindow):
                 width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+                # 创建视频结果目录
+                video_results_dir = os.path.join(self.results_path, "videos")
+                if not os.path.exists(video_results_dir):
+                    os.makedirs(video_results_dir)
+
                 # 创建视频写入器
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_file = os.path.join(self.output_path, f"output_{timestamp}.mp4")
+                output_file = os.path.join(video_results_dir, f"output_{timestamp}.mp4")
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 self.video_writer = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
 
@@ -502,9 +536,14 @@ class YOLODetectionUI(QMainWindow):
             width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+            # 创建摄像头结果目录
+            camera_results_dir = os.path.join(self.results_path, "camera")
+            if not os.path.exists(camera_results_dir):
+                os.makedirs(camera_results_dir)
+
             # 创建视频写入器
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = os.path.join(self.output_path, f"camera_{timestamp}.mp4")
+            output_file = os.path.join(camera_results_dir, f"camera_{timestamp}.mp4")
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             self.video_writer = cv2.VideoWriter(output_file, fourcc, 20, (width, height))
 
@@ -594,11 +633,16 @@ class YOLODetectionUI(QMainWindow):
             QMessageBox.warning(self, "警告", "没有可保存的检测结果")
             return
 
+        # 创建图片结果目录
+        image_results_dir = os.path.join(self.results_path, "images")
+        if not os.path.exists(image_results_dir):
+            os.makedirs(image_results_dir)
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         default_name = f"result_{timestamp}.jpg"
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "保存结果", os.path.join(self.output_path, default_name),
+            self, "保存结果", os.path.join(image_results_dir, default_name),
             "图片文件 (*.jpg *.jpeg *.png *.bmp);;所有文件 (*)"
         )
 
