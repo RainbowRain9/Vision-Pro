@@ -1,0 +1,4 @@
+person
+car
+bicycle
+traffic_light
