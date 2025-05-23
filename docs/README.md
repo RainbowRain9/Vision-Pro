@@ -4,6 +4,14 @@
 
 ## 📁 目录结构
 
+### 🚁 drone_yolo/
+Drone-YOLO 集成开发专用文档
+- `TODO_DroneYOLO_Integration.md` - 完整的集成开发计划
+- `DRONE_YOLO_QUICKSTART.md` - 快速开始指南（3-4小时）
+- `DRONE_YOLO_IMPLEMENTATION_CHECKLIST.md` - 技术实现检查清单
+- `Drone-YOLO集成文档总结.md` - 文档创建总结
+- `README.md` - 目录说明和使用指南
+
 ### 📖 technical_analysis/
 技术分析和深度解析文档
 - `drone_yolo_detailed_explanation.md` - Drone-YOLO 详细技术解析
@@ -26,6 +34,13 @@
 
 ## 🎯 使用说明
 
+### 🚁 Drone-YOLO 集成开发
+1. **项目规划**: 查看 `drone_yolo/TODO_DroneYOLO_Integration.md` 了解完整开发计划
+2. **快速开始**: 按照 `drone_yolo/DRONE_YOLO_QUICKSTART.md` 进行快速验证
+3. **质量检查**: 使用 `drone_yolo/DRONE_YOLO_IMPLEMENTATION_CHECKLIST.md` 验证实现
+4. **文档导航**: 参考 `drone_yolo/README.md` 了解文档使用方法
+
+### 📚 一般学习路径
 1. **技术学习**: 从 `technical_analysis/` 开始，了解 Drone-YOLO 的核心技术
 2. **实践操作**: 参考 `tutorials/` 中的教程进行实际操作
 3. **深入研究**: 查阅 `references/` 中的参考资料进行深入学习

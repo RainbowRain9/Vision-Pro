@@ -1,0 +1,48 @@
+# VisDrone2019 数据集配置文件
+# 适用于 YOLOvision Pro 项目的 Drone-YOLO 训练
+
+# 数据集根目录 (相对于项目根目录)
+path: data/visdrone_yolo
+
+# 训练/验证/测试集路径 (相对于 path)
+train: images/train
+val: images/val
+test: images/test
+
+# 类别数量
+nc: 10
+
+# 类别名称 (VisDrone2019 数据集的10个类别)
+names:
+  0: pedestrian      # 行人
+  1: people          # 人群
+  2: bicycle         # 自行车
+  3: car             # 汽车
+  4: van             # 面包车
+  5: truck           # 卡车
+  6: tricycle        # 三轮车
+  7: awning-tricycle # 遮阳三轮车
+  8: bus             # 公交车
+  9: motor           # 摩托车
+
+# 数据集信息
+info:
+  description: "VisDrone2019 Detection Dataset for small object detection"
+  version: "2019"
+  year: 2019
+  contributor: "Tianjin University"
+  url: "https://github.com/VisDrone/VisDrone-Dataset"
+  
+# 训练参数建议
+training_params:
+  imgsz: 640
+  epochs: 300
+  batch_size: 8
+  workers: 8
+  cache: true
+  
+# Drone-YOLO 特定配置
+drone_yolo:
+  model_config: "assets/configs/yolov8s-drone.yaml"
+  focus_small_objects: true
+  multi_scale_training: true
