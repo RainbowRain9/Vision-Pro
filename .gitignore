@@ -1,6 +1,9 @@
 # YOLOvision Pro - Git Ignore File
+# 专业的目标检测开发工具链
 
-# Python
+# =============================================================================
+# Python 相关
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,25 +26,63 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environments
+# 编译的 Python 文件
+*.pyc
+*.pyo
+*.pyd
+
+# =============================================================================
+# 虚拟环境
+# =============================================================================
 yolo8/
 venv/
 env/
 ENV/
 .venv/
 .env
+conda-env/
+.conda/
+pipenv/
+Pipfile.lock
 
-# PyQt5
-*.ui~
-
-# IDE
+# =============================================================================
+# IDE 和编辑器
+# =============================================================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.spyderproject
+.spyproject
+.ropeproject
+*.sublime-project
+*.sublime-workspace
 
-# OS
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# =============================================================================
+# 操作系统文件
+# =============================================================================
 .DS_Store
 .DS_Store?
 ._*
@@ -50,86 +91,317 @@ ENV/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# Model Files (too large for Git)
+# Windows
+*.lnk
+
+# Linux
+*~
+
+# =============================================================================
+# 深度学习和 YOLO 相关
+# =============================================================================
+
+# 模型文件（通常很大，不适合 Git 跟踪）
 *.pt
 *.pth
 *.onnx
 *.engine
 *.trt
 *.weights
+*.h5
+*.pb
+*.tflite
+*.mlmodel
+*.caffemodel
+*.prototxt
 
-# Large Data Files
+# 训练输出和运行结果
+runs/
+outputs/logs/
+outputs/models/*.pt
+outputs/models/*.pth
+outputs/models/*.onnx
+outputs/results/*.jpg
+outputs/results/*.png
+outputs/results/*.mp4
+outputs/visualizations/*.png
+outputs/visualizations/*.svg
+outputs/reports/*.html
+
+# TensorBoard 日志
+logs/
+tensorboard_logs/
+tb_logs/
+
+# Weights & Biases
+wandb/
+
+# MLflow
+mlruns/
+
+# =============================================================================
+# 数据集和大型数据文件
+# =============================================================================
+
+# 原始数据集（通常很大）
 data/VisDrone2019-DET-train/
+data/VisDrone2019-DET-val/
+data/VisDrone2019-DET-test/
+data/COCO/
+data/ImageNet/
+data/custom_dataset/
+
+# 处理后的数据集图像和标签
+data/visdrone_yolo/images/
+data/visdrone_yolo/images/test/
+data/visdrone_yolo/images_temp/
+data/visdrone_yolo/labels/
+data/visdrone_yolo/labels_temp/
 data/raw_images/*.jpg
 data/raw_images/*.png
 data/raw_images/*.jpeg
-data/yolo_dataset/images/
-data/yolo_dataset/labels/
 
-# Results and Outputs
+# 结果文件
 results/images/*.jpg
 results/images/*.png
 results/videos/*.mp4
 results/videos/*.avi
 results/camera/*.mp4
-outputs/models/*.pt
-outputs/models/*.pth
-outputs/logs/*.log
-outputs/results/*.jpg
-outputs/results/*.png
-runs/
 
-# Temporary Files
-*.tmp
-*.temp
-*.log
-*.cache
+# =============================================================================
+# 开发和测试相关
+# =============================================================================
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 
 # pytest
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 
 # mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Documentation builds
-docs/_build/
-site/
+# 单元测试
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
 
-# Backup files
+# =============================================================================
+# 临时文件和缓存
+# =============================================================================
+*.tmp
+*.temp
+*.log
+*.cache
+*.pid
+*.seed
+*.pid.lock
+
+# 系统缓存
+.cache/
+__pycache__/
+.pytest_cache/
+
+# =============================================================================
+# 文档构建
+# =============================================================================
+docs/_build/
+docs/build/
+site/
+_site/
+
+# Sphinx
+docs/_build/
+docs/build/
+
+# =============================================================================
+# 备份和临时文件
+# =============================================================================
 *.bak
 *.backup
 *~
+*.orig
+*.rej
 
-# Large datasets (keep structure but not content)
-!data/raw_images/.gitkeep
-!data/yolo_dataset/images/.gitkeep
-!data/yolo_dataset/labels/.gitkeep
-!results/images/.gitkeep
-!results/videos/.gitkeep
-!results/camera/.gitkeep
-!outputs/models/.gitkeep
-!outputs/logs/.gitkeep
-!outputs/results/.gitkeep
+# =============================================================================
+# 项目特定配置
+# =============================================================================
 
-# Keep important empty directories
-!assets/data/sample_images/.gitkeep
-!assets/images/architecture/.gitkeep
-!assets/images/results/.gitkeep
-!assets/images/demos/.gitkeep
-!experiments/baseline_comparison/.gitkeep
-!experiments/ablation_studies/.gitkeep
-!experiments/performance_analysis/.gitkeep
-!scripts/demo/.gitkeep
-!scripts/testing/.gitkeep
-!scripts/visualization/.gitkeep
-!scripts/training/.gitkeep
-!docs/tutorials/.gitkeep
-!docs/references/.gitkeep
+# 保留重要的配置文件
+!data/visdrone_yolo/data.yaml
+!data/visdrone_yolo/classes.txt
+!data/configs/*.yaml
+!assets/configs/*.yaml
+
+# 保留示例和文档
+!assets/data/sample_images/
+!assets/images/architecture/
+!docs/tutorials/
+!docs/references/
+
+# 保留脚本结构（新重组的目录）
+!scripts/
+!scripts/data_processing/
+!scripts/data_processing/visdrone/
+!scripts/data_processing/general/
+!scripts/data_processing/demos/
+!scripts/validation/
+!scripts/training/
+!scripts/testing/
+!scripts/demo/
+!scripts/visualization/
+!scripts/docs/
+
+# =============================================================================
+# 保留目录结构但忽略内容
+# =============================================================================
+
+# 数据目录结构
+!data/
+!data/raw_images/
+!data/yolo_dataset/
+!data/yolo_dataset/images/
+!data/yolo_dataset/labels/
+!data/visdrone_yolo/
+
+# 输出目录结构
+!outputs/
+!outputs/models/
+!outputs/logs/
+!outputs/results/
+!outputs/visualizations/
+!outputs/reports/
+
+# 结果目录结构
+!results/
+!results/images/
+!results/videos/
+!results/camera/
+
+# 实验目录结构
+!experiments/
+!experiments/baseline_comparison/
+!experiments/ablation_studies/
+!experiments/performance_analysis/
+
+# 资源目录结构
+!assets/
+!assets/data/
+!assets/images/
+!assets/configs/
+
+# 文档目录结构
+!docs/
+!docs/tutorials/
+!docs/references/
+!docs/technical_analysis/
+!docs/drone_yolo/
+
+# 保留 .gitkeep 文件以维持空目录结构
+!**/.gitkeep
+
+# =============================================================================
+# 特殊文件处理
+# =============================================================================
+
+# 保留重要的项目文件
+!README.md
+!Readme.md
+!requirements.txt
+!setup.py
+!pyproject.toml
+!environment.yml
+!Dockerfile
+!docker-compose.yml
+!.github/
+
+# 保留配置文件
+!*.yaml
+!*.yml
+!*.json
+!*.toml
+!*.cfg
+!*.ini
+
+# 但忽略敏感配置
+.env
+.env.local
+.env.*.local
+config/secrets.yaml
+config/private.yaml
+
+# =============================================================================
+# 版本控制相关
+# =============================================================================
+
+# Git 相关
+.git/
+*.patch
+*.diff
+
+# SVN 相关
+.svn/
+
+# Mercurial 相关
+.hg/
+.hgignore
+
+# =============================================================================
+# 网络和安全相关
+# =============================================================================
+
+# API 密钥和令牌
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.txt
+api_keys.txt
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# 其他工具相关
+# =============================================================================
+
+# Node.js (如果使用前端工具)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 大型媒体文件（除了示例）
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+!assets/videos/demo.mp4
+!assets/videos/sample.mp4

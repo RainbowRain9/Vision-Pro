@@ -1,5 +1,11 @@
 # VisDrone2019 数据集配置文件
 # 适用于 YOLOvision Pro 项目的 Drone-YOLO 训练
+#
+# 使用说明:
+# 1. 运行数据集转换: python scripts/convert_visdrone.py -i data/VisDrone2019-DET-train -o data/visdrone_yolo
+# 2. 运行数据集划分: python scripts/split_visdrone_dataset.py -i data/visdrone_yolo -o data/visdrone_yolo
+# 3. 验证数据集: python scripts/validate_visdrone_dataset.py -d data/visdrone_yolo --visualize
+# 4. 或者一键处理: python scripts/process_visdrone_complete.py -i data/VisDrone2019-DET-train -o data/visdrone_yolo
 
 # 数据集根目录 (相对于项目根目录)
 path: data/visdrone_yolo
@@ -13,36 +19,98 @@ test: images/test
 nc: 10
 
 # 类别名称 (VisDrone2019 数据集的10个类别)
+# 映射关系: VisDrone 原始类别 1-10 -> YOLO 类别 0-9
 names:
-  0: pedestrian      # 行人
-  1: people          # 人群
-  2: bicycle         # 自行车
-  3: car             # 汽车
-  4: van             # 面包车
-  5: truck           # 卡车
-  6: tricycle        # 三轮车
-  7: awning-tricycle # 遮阳三轮车
-  8: bus             # 公交车
-  9: motor           # 摩托车
+  0: pedestrian      # 行人 (VisDrone class 1)
+  1: people          # 人群 (VisDrone class 2)
+  2: bicycle         # 自行车 (VisDrone class 3)
+  3: car             # 汽车 (VisDrone class 4)
+  4: van             # 面包车 (VisDrone class 5)
+  5: truck           # 卡车 (VisDrone class 6)
+  6: tricycle        # 三轮车 (VisDrone class 7)
+  7: awning-tricycle # 遮阳三轮车 (VisDrone class 8)
+  8: bus             # 公交车 (VisDrone class 9)
+  9: motor           # 摩托车 (VisDrone class 10)
 
 # 数据集信息
 info:
-  description: "VisDrone2019 Detection Dataset for small object detection"
+  description: "VisDrone2019 Detection Dataset for small object detection in drone imagery"
   version: "2019"
   year: 2019
   contributor: "Tianjin University"
   url: "https://github.com/VisDrone/VisDrone-Dataset"
-  
+  paper: "https://arxiv.org/abs/1804.07437"
+  citation: "Zhu et al. Vision Meets Drones: A Challenge. arXiv:1804.07437, 2018."
+
+# 数据集统计 (示例，实际数值会在处理后更新)
+statistics:
+  total_images: 6471
+  total_annotations: 343204
+  train_images: 5177
+  val_images: 647
+  test_images: 647
+  avg_objects_per_image: 53.0
+
 # 训练参数建议
 training_params:
-  imgsz: 640
-  epochs: 300
-  batch_size: 8
-  workers: 8
-  cache: true
-  
+  # 基础参数
+  imgsz: 640          # 输入图像尺寸
+  epochs: 300         # 训练轮数
+  batch_size: 8       # 批次大小 (根据GPU内存调整)
+  workers: 8          # 数据加载线程数
+  cache: true         # 缓存图像到内存
+
+  # 优化器参数
+  optimizer: 'AdamW'  # 优化器类型
+  lr0: 0.001          # 初始学习率
+  lrf: 0.01           # 最终学习率 (lr0 * lrf)
+  momentum: 0.937     # SGD 动量
+  weight_decay: 0.0005 # 权重衰减
+
+  # 数据增强
+  hsv_h: 0.015        # 色调增强
+  hsv_s: 0.7          # 饱和度增强
+  hsv_v: 0.4          # 明度增强
+  degrees: 0.0        # 旋转角度
+  translate: 0.1      # 平移
+  scale: 0.5          # 缩放
+  shear: 0.0          # 剪切
+  perspective: 0.0    # 透视变换
+  flipud: 0.0         # 上下翻转
+  fliplr: 0.5         # 左右翻转
+  mosaic: 1.0         # 马赛克增强
+  mixup: 0.0          # 混合增强
+  copy_paste: 0.0     # 复制粘贴增强
+
 # Drone-YOLO 特定配置
 drone_yolo:
   model_config: "assets/configs/yolov8s-drone.yaml"
   focus_small_objects: true
   multi_scale_training: true
+  small_object_threshold: 0.02  # 小目标阈值 (相对于图像面积)
+
+  # 小目标检测优化
+  anchor_optimization: true
+  feature_pyramid_enhancement: true
+  attention_mechanism: true
+
+  # 损失函数权重
+  box_loss_weight: 7.5
+  cls_loss_weight: 0.5
+  dfl_loss_weight: 1.5
+
+# 评估参数
+evaluation:
+  conf_threshold: 0.001    # 置信度阈值
+  iou_threshold: 0.6       # NMS IoU 阈值
+  max_det: 300            # 最大检测数量
+
+  # mAP 计算参数
+  iou_thresholds: [0.5, 0.95]  # IoU 阈值范围
+
+# 推理参数
+inference:
+  conf_threshold: 0.25     # 推理置信度阈值
+  iou_threshold: 0.45      # 推理 NMS IoU 阈值
+  max_det: 1000           # 推理最大检测数量
+  agnostic_nms: false     # 类别无关 NMS

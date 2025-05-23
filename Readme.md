@@ -19,6 +19,11 @@ YOLOvision Pro 是一个完整的YOLO目标检测解决方案，专注于小目�
    - LabelMe 标注工具集成
    - 自动格式转换和数据集划分
 
+4. **🚁 VisDrone 数据集处理** - 专业的 VisDrone2019 数据集处理工具
+   - 一键格式转换（VisDrone → YOLO）
+   - 智能数据集划分和验证
+   - 详细统计分析和可视化
+
 ## 2. 项目架构
 
 项目采用模块化的目录结构，便于开发、实验和部署：
@@ -32,12 +37,16 @@ yolovision_pro/
 │   ├── tutorials/              # 教程指南
 │   └── references/             # 参考资料
 ├── 🔧 scripts/                  # 脚本目录
-│   ├── demo/                   # 演示脚本
-│   ├── testing/                # 测试脚本
-│   ├── visualization/          # 可视化脚本
+│   ├── data_processing/        # 数据处理脚本
+│   │   ├── visdrone/          # VisDrone 专用工具
+│   │   ├── general/           # 通用数据处理工具
+│   │   └── demos/             # 数据处理演示
+│   ├── validation/             # 验证和检查工具
 │   ├── training/               # 训练脚本
-│   ├── labelme2yolo.py         # LabelMe 转 YOLO 格式
-│   └── split_dataset.py        # 数据集划分
+│   ├── testing/                # 测试脚本
+│   ├── demo/                   # 演示脚本
+│   ├── visualization/          # 可视化脚本
+│   └── docs/                   # 脚本文档
 ├── 🎨 assets/                   # 资源目录
 │   ├── images/                 # 图片资源（架构图、结果图等）
 │   ├── configs/                # 配置文件
@@ -53,7 +62,10 @@ yolovision_pro/
 ├── 📁 data/                     # 数据目录
 │   ├── raw_images/             # 原始图像
 │   ├── annotations/            # 标注文件
-│   └── yolo_dataset/           # YOLO 格式数据集
+│   ├── yolo_dataset/           # YOLO 格式数据集
+│   ├── VisDrone2019-DET-train/ # VisDrone 原始数据集
+│   ├── visdrone_yolo/          # VisDrone YOLO 格式数据集
+│   └── configs/                # 数据集配置文件
 ├── 🤖 models/                   # 预训练模型
 ├── 📈 results/                  # 检测结果
 │   ├── images/                 # 图片检测结果
@@ -111,9 +123,55 @@ python scripts/visualization/visualize_drone_yolo.py
 python scripts/demo/drone_yolo_demo.py
 ```
 
-## 4. YOLOv8目标检测系统
+## 4. 🚁 VisDrone 数据集处理
 
-### 4.1 功能概述
+### 4.1 功能特性
+
+YOLOvision Pro 提供了完整的 VisDrone2019 数据集处理工具链：
+
+- **🔄 格式转换**: 将 VisDrone 标注格式转换为 YOLO 格式
+- **📊 数据划分**: 按 8:1:1 比例智能划分训练/验证/测试集
+- **✅ 数据验证**: 检查数据完整性和标注格式正确性
+- **📈 统计分析**: 生成详细的数据集统计报告和可视化图表
+
+### 4.2 快速开始
+
+```bash
+# 一键处理 VisDrone 数据集（推荐）
+python scripts/data_processing/visdrone/process_visdrone_complete.py \
+    --input data/VisDrone2019-DET-train \
+    --output data/visdrone_yolo \
+    --verbose
+
+# 分步处理
+python scripts/data_processing/visdrone/convert_visdrone.py -i data/VisDrone2019-DET-train -o data/visdrone_yolo
+python scripts/data_processing/visdrone/split_visdrone_dataset.py -i data/visdrone_yolo -o data/visdrone_yolo
+python scripts/data_processing/visdrone/validate_visdrone_dataset.py -d data/visdrone_yolo --visualize
+
+# 查看演示和帮助
+python scripts/data_processing/demos/demo_visdrone_processing.py
+```
+
+### 4.3 类别映射
+
+| VisDrone | YOLO | 类别名称 |
+|----------|------|----------|
+| 1 | 0 | pedestrian (行人) |
+| 2 | 1 | people (人群) |
+| 3 | 2 | bicycle (自行车) |
+| 4 | 3 | car (汽车) |
+| 5 | 4 | van (面包车) |
+| 6 | 5 | truck (卡车) |
+| 7 | 6 | tricycle (三轮车) |
+| 8 | 7 | awning-tricycle (遮阳三轮车) |
+| 9 | 8 | bus (公交车) |
+| 10 | 9 | motor (摩托车) |
+
+详细文档: [VisDrone 处理工具说明](scripts/README_VisDrone.md)
+
+## 5. YOLOv8目标检测系统
+
+### 5.1 功能概述
 
 YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供了以下功能：
 
@@ -132,7 +190,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
   - 自动保存视频检测结果到results/videos目录
   - 自动保存摄像头检测结果到results/camera目录
 
-### 4.2 系统要求
+### 5.2 系统要求
 
 - Python 3.7+
 - PyQt5
@@ -140,7 +198,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 - Ultralytics YOLOv8
 - NumPy
 
-### 4.3 安装与运行
+### 5.3 安装与运行
 
 1. 确保已安装所需依赖：
    ```bash
@@ -152,7 +210,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    python main.py
    ```
 
-### 4.4 使用说明
+### 5.4 使用说明
 
 1. **加载模型**：
    - 从下拉列表选择models目录中的模型文件
@@ -176,9 +234,9 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    - 点击"保存结果"按钮保存当前检测结果图像
    - 视频和摄像头检测结果自动保存在results目录下的相应子目录中
 
-## 5. 数据标注与准备流程
+## 6. 数据标注与准备流程
 
-### 5.1 准备工作
+### 6.1 准备工作
 
 1. **安装LabelMe**：
    ```bash
@@ -188,7 +246,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 2. **准备类别文件**：
    在`data/classes.txt`中列出所有目标类别，每行一个类别名称。
 
-### 5.2 数据标注流程
+### 6.2 数据标注流程
 
 1. **准备原始图像**：
    将待标注的图像放入`data/raw_images/`目录。
@@ -208,7 +266,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    python scripts/split_dataset.py
    ```
 
-### 5.3 模型训练
+### 6.3 模型训练
 
 使用准备好的数据集训练模型：
 
@@ -222,7 +280,7 @@ python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-dron
 
 训练完成后，将生成的模型文件（如best.pt）放入`models/`目录，即可在UI界面中使用。
 
-## 6. 项目文档
+## 7. 项目文档
 
 详细文档分布在以下目录：
 
@@ -230,8 +288,11 @@ python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-dron
 - **📖 doc/**: 传统文档目录
   - `ui_guide.md`：UI界面使用指南
   - `development_guide.md`：开发者指南
+- **🚁 VisDrone 工具**: VisDrone 数据集处理工具文档
+  - [VisDrone 处理工具说明](scripts/docs/VisDrone工具说明.md)
+  - [VisDrone 数据集处理工具总结](docs/VisDrone数据集处理工具总结.md)
 
-## 7. 贡献与支持
+## 8. 贡献与支持
 
 欢迎提交问题报告和功能建议。如需贡献代码，请遵循以下步骤：
 

@@ -1,0 +1,48 @@
+YOLOvision Pro 本地 ultralytics 配置验证报告
+============================================================
+验证时间: 2025-05-23 18:32:12
+工作目录: D:\Code\yolovision_pro
+Python 版本: 3.11.1
+Python 路径: D:\Code\yolovision_pro\yolo8\Scripts\python.exe
+
+Ultralytics 配置:
+------------------------------
+版本: 8.3.143
+路径: D:\Code\yolovision_pro\ultralytics
+本地开发版本: 是
+
+YOLO 模型信息:
+------------------------------
+加载状态: 成功
+类别数量: 80
+设备: cpu
+
+VisDrone 数据集信息:
+------------------------------
+配置状态: 正常
+总图像数: 8670
+总标签数: 8670
+train 集: 6219 图像, 6219 标签
+val 集: 1226 图像, 1226 标签
+test 集: 1225 图像, 1225 标签
+
+环境信息:
+------------------------------
+虚拟环境: 是
+依赖包状态:
+  torch: 2.7.0+cpu
+  torchvision: 0.22.0+cpu
+  numpy: 1.26.4
+  opencv-python: 4.11.0
+  pillow: Unknown
+  yaml: Available
+  matplotlib: 3.10.3
+  tqdm: 4.67.1
+
+功能测试结果:
+------------------------------
+model_init: 通过
+config_access: 通过
+import_test: 通过
+
+总体状态: 配置正常
