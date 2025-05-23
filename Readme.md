@@ -1,47 +1,119 @@
-# YOLO 项目
+# 🚁 YOLOvision Pro
 
 ## 1. 概述
 
-本项目是一个完整的YOLO目标检测解决方案，包含从数据标注、模型训练到模型应用的全流程工具。主要包括两个部分：
+YOLOvision Pro 是一个完整的YOLO目标检测解决方案，专注于小目标检测优化，特别是无人机场景下的目标检测。项目包含从数据标注、模型训练到模型应用的全流程工具，并实现了先进的 Drone-YOLO 算法。
 
-1. **YOLOv8目标检测系统** - 一个基于PyQt5的图形界面应用，用于使用YOLOv8模型进行目标检测
-2. **LabelMe 标注与数据准备工具** - 用于图像标注并为YOLO目标检测项目准备数据集的工具链
+### 主要特性
+
+1. **🎯 Drone-YOLO 算法** - 基于 YOLOv8 优化的小目标检测模型
+   - RepVGGBlock 高效主干网络
+   - P2 小目标检测头
+   - 三明治融合结构
+
+2. **🖥️ YOLOv8 检测系统** - 基于PyQt5的图形界面应用
+   - 多种输入源支持（图片/视频/摄像头）
+   - 实时参数调节和结果可视化
+
+3. **🏷️ 数据标注工具链** - 完整的数据准备流程
+   - LabelMe 标注工具集成
+   - 自动格式转换和数据集划分
 
 ## 2. 项目架构
 
-项目采用以下目录结构，便于数据管理和工作流程组织：
+项目采用模块化的目录结构，便于开发、实验和部署：
 
 ```
-yolo_project/
-├── main.py                      # 主程序入口，实现UI界面
-├── data/
-│   ├── raw_images/              # 存放原始未标注图像
-│   ├── annotations/             # 存放 LabelMe 生成的 JSON 格式标注文件
-│   ├── yolo_dataset/            # 存放转换后的 YOLO 格式数据集
-│   │   ├── images/
-│   │   │   ├── train/          # 训练集图像
-│   │   │   ├── val/            # 验证集图像
-│   │   │   └── test/           # 测试集图像
-│   │   ├── labels/
-│   │   │   ├── train/          # 训练集 YOLO 格式标签
-│   │   │   ├── val/            # 验证集 YOLO 格式标签
-│   │   │   └── test/           # 测试集 YOLO 格式标签
-│   │   └── data.yaml           # YOLO 数据集配置文件
-│   └── classes.txt              # 类别列表文件
-├── scripts/
-│   ├── labelme2yolo.py          # 转换脚本：将 LabelMe JSON 标注转换为 YOLO 格式
-│   └── split_dataset.py         # 数据集划分脚本
-├── models/                      # 存放训练好的模型权重文件
-├── results/                     # 存放检测结果
-│   ├── images/                  # 图片检测结果
-│   ├── videos/                  # 视频检测结果
-│   └── camera/                  # 摄像头检测结果
-└── doc/                         # 文档目录
+yolovision_pro/
+├── 📄 main.py                   # 主程序入口，实现UI界面
+├── 🚀 train.py                  # 模型训练脚本
+├── 📚 docs/                     # 文档目录
+│   ├── technical_analysis/      # 技术分析文档
+│   ├── tutorials/              # 教程指南
+│   └── references/             # 参考资料
+├── 🔧 scripts/                  # 脚本目录
+│   ├── demo/                   # 演示脚本
+│   ├── testing/                # 测试脚本
+│   ├── visualization/          # 可视化脚本
+│   ├── training/               # 训练脚本
+│   ├── labelme2yolo.py         # LabelMe 转 YOLO 格式
+│   └── split_dataset.py        # 数据集划分
+├── 🎨 assets/                   # 资源目录
+│   ├── images/                 # 图片资源（架构图、结果图等）
+│   ├── configs/                # 配置文件
+│   └── data/                   # 数据样本
+├── 🧪 experiments/              # 实验目录
+│   ├── baseline_comparison/    # 基线对比实验
+│   ├── ablation_studies/       # 消融实验
+│   └── performance_analysis/   # 性能分析
+├── 📊 outputs/                  # 输出目录
+│   ├── models/                 # 训练好的模型
+│   ├── logs/                   # 训练日志
+│   └── results/                # 实验结果
+├── 📁 data/                     # 数据目录
+│   ├── raw_images/             # 原始图像
+│   ├── annotations/            # 标注文件
+│   └── yolo_dataset/           # YOLO 格式数据集
+├── 🤖 models/                   # 预训练模型
+├── 📈 results/                  # 检测结果
+│   ├── images/                 # 图片检测结果
+│   ├── videos/                 # 视频检测结果
+│   └── camera/                 # 摄像头检测结果
+└── 🔬 ultralytics/              # YOLOv8 框架（含 Drone-YOLO 实现）
 ```
 
-## 3. YOLOv8目标检测系统
+### 📖 目录说明
 
-### 3.1 功能概述
+- **📚 docs/**: 包含技术文档、教程和参考资料 → [查看详情](docs/README.md)
+- **🔧 scripts/**: 各种功能脚本，包括演示、测试、可视化等 → [查看详情](scripts/README.md)
+- **🎨 assets/**: 项目资源文件，包括配置、图片、数据样本 → [查看详情](assets/README.md)
+- **🧪 experiments/**: 实验配置和结果，支持系统性研究 → [查看详情](experiments/README.md)
+- **📊 outputs/**: 训练输出、日志和结果文件 → [查看详情](outputs/README.md)
+
+## 3. 🎯 Drone-YOLO 算法
+
+### 3.1 核心创新
+
+Drone-YOLO 是基于 YOLOv8 优化的小目标检测算法，专门针对无人机场景进行了以下改进：
+
+1. **🔧 RepVGGBlock 主干网络**
+   - 训练时使用多分支结构（3x3卷积 + 1x1卷积 + 恒等映射）
+   - 推理时融合为单个3x3卷积，提升速度
+   - 平衡了表达能力和计算效率
+
+2. **🎯 P2 小目标检测头**
+   - 增加 1/4 下采样的 P2 检测层
+   - 160×160 高分辨率特征图，专门检测 4-16 像素小目标
+   - 25,600 个检测位置，4倍于传统 P3 层
+
+3. **🥪 三明治融合结构**
+   - 融合上层语义信息 + 当前层特征 + 下层细节信息
+   - 使用 DWConv 进行高效的跨尺度特征融合
+   - 显著提升小目标检测性能
+
+### 3.2 性能指标
+
+| 模型 | 参数量 | 计算量 | 检测层 | 特点 |
+|------|--------|--------|--------|------|
+| YOLOv8s | 11.2M | 28.6 GFLOPs | 3层 (P3,P4,P5) | 基线模型 |
+| Drone-YOLO | 11.1M | 40.3 GFLOPs | 4层 (P2,P3,P4,P5) | 小目标优化 |
+
+### 3.3 快速开始
+
+```bash
+# 测试 Drone-YOLO 模型
+python scripts/testing/test_drone_yolo.py
+
+# 查看架构可视化
+python scripts/visualization/visualize_drone_yolo.py
+
+# 运行技术演示
+python scripts/demo/drone_yolo_demo.py
+```
+
+## 4. YOLOv8目标检测系统
+
+### 4.1 功能概述
 
 YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供了以下功能：
 
@@ -60,7 +132,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
   - 自动保存视频检测结果到results/videos目录
   - 自动保存摄像头检测结果到results/camera目录
 
-### 3.2 系统要求
+### 4.2 系统要求
 
 - Python 3.7+
 - PyQt5
@@ -68,7 +140,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 - Ultralytics YOLOv8
 - NumPy
 
-### 3.3 安装与运行
+### 4.3 安装与运行
 
 1. 确保已安装所需依赖：
    ```bash
@@ -80,7 +152,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    python main.py
    ```
 
-### 3.4 使用说明
+### 4.4 使用说明
 
 1. **加载模型**：
    - 从下拉列表选择models目录中的模型文件
@@ -104,9 +176,9 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    - 点击"保存结果"按钮保存当前检测结果图像
    - 视频和摄像头检测结果自动保存在results目录下的相应子目录中
 
-## 4. 数据标注与准备流程
+## 5. 数据标注与准备流程
 
-### 4.1 准备工作
+### 5.1 准备工作
 
 1. **安装LabelMe**：
    ```bash
@@ -116,7 +188,7 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 2. **准备类别文件**：
    在`data/classes.txt`中列出所有目标类别，每行一个类别名称。
 
-### 4.2 数据标注流程
+### 5.2 数据标注流程
 
 1. **准备原始图像**：
    将待标注的图像放入`data/raw_images/`目录。
@@ -136,24 +208,30 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
    python scripts/split_dataset.py
    ```
 
-### 4.3 模型训练
+### 5.3 模型训练
 
-使用准备好的数据集训练YOLOv8模型：
+使用准备好的数据集训练模型：
 
 ```bash
+# 训练标准 YOLOv8 模型
 yolo task=detect mode=train model=yolov8s.pt data=data/yolo_dataset/data.yaml epochs=100 imgsz=640
+
+# 训练 Drone-YOLO 模型
+python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-drone.yaml --data data/yolo_dataset/data.yaml
 ```
 
 训练完成后，将生成的模型文件（如best.pt）放入`models/`目录，即可在UI界面中使用。
 
-## 5. 项目文档
+## 6. 项目文档
 
-详细文档位于`doc/`目录：
+详细文档分布在以下目录：
 
-- `ui_guide.md`：UI界面使用指南
-- `development_guide.md`：开发者指南
+- **📚 docs/**: 完整的技术文档和教程 → [查看详情](docs/README.md)
+- **📖 doc/**: 传统文档目录
+  - `ui_guide.md`：UI界面使用指南
+  - `development_guide.md`：开发者指南
 
-## 6. 贡献与支持
+## 7. 贡献与支持
 
 欢迎提交问题报告和功能建议。如需贡献代码，请遵循以下步骤：
 

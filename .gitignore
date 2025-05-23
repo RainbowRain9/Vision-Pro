@@ -1,0 +1,135 @@
+# YOLOvision Pro - Git Ignore File
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+yolo8/
+venv/
+env/
+ENV/
+.venv/
+.env
+
+# PyQt5
+*.ui~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Model Files (too large for Git)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.weights
+
+# Large Data Files
+data/VisDrone2019-DET-train/
+data/raw_images/*.jpg
+data/raw_images/*.png
+data/raw_images/*.jpeg
+data/yolo_dataset/images/
+data/yolo_dataset/labels/
+
+# Results and Outputs
+results/images/*.jpg
+results/images/*.png
+results/videos/*.mp4
+results/videos/*.avi
+results/camera/*.mp4
+outputs/models/*.pt
+outputs/models/*.pth
+outputs/logs/*.log
+outputs/results/*.jpg
+outputs/results/*.png
+runs/
+
+# Temporary Files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Documentation builds
+docs/_build/
+site/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Large datasets (keep structure but not content)
+!data/raw_images/.gitkeep
+!data/yolo_dataset/images/.gitkeep
+!data/yolo_dataset/labels/.gitkeep
+!results/images/.gitkeep
+!results/videos/.gitkeep
+!results/camera/.gitkeep
+!outputs/models/.gitkeep
+!outputs/logs/.gitkeep
+!outputs/results/.gitkeep
+
+# Keep important empty directories
+!assets/data/sample_images/.gitkeep
+!assets/images/architecture/.gitkeep
+!assets/images/results/.gitkeep
+!assets/images/demos/.gitkeep
+!experiments/baseline_comparison/.gitkeep
+!experiments/ablation_studies/.gitkeep
+!experiments/performance_analysis/.gitkeep
+!scripts/demo/.gitkeep
+!scripts/testing/.gitkeep
+!scripts/visualization/.gitkeep
+!scripts/training/.gitkeep
+!docs/tutorials/.gitkeep
+!docs/references/.gitkeep

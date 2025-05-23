@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-YOLOv8目标检测系统 - 主程序
+YOLOvision Pro - 目标检测系统主程序
+支持标准 YOLOv8 和 Drone-YOLO 模型
 """
 
 import os
 import sys
 import cv2
-import numpy as np
 import datetime
+import logging
+import yaml
+from pathlib import Path
 from ultralytics import YOLO
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap, QIcon
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox,
@@ -25,11 +28,11 @@ class CenteredDelegate(QStyledItemDelegate):
 
 
 class YOLODetectionUI(QMainWindow):
-    """YOLOv8目标检测系统主界面类"""
+    """YOLOvision Pro 目标检测系统主界面类"""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("YOLOv8 目标检测系统")
+        self.setWindowTitle("YOLOvision Pro - 目标检测系统")
         self.resize(1400, 900)
 
         # 设置窗口图标
@@ -48,22 +51,55 @@ class YOLODetectionUI(QMainWindow):
         self.current_image = None
         self.current_result = None
         self.video_writer = None
+        self.current_config = None
 
-        # 设置项目路径
-        self.project_root = os.path.dirname(os.path.abspath(__file__))
-        self.models_path = os.path.join(self.project_root, "models")
-        self.results_path = os.path.join(self.project_root, "results")
-        self.output_path = os.path.join(self.project_root, "results")
+        # 设置项目路径 - 适应新的目录结构
+        self.project_root = Path(__file__).parent
+        self.models_path = self.project_root / "models"
+        self.configs_path = self.project_root / "assets" / "configs"
+        self.results_path = self.project_root / "results"
+        self.outputs_path = self.project_root / "outputs"
+        self.scripts_path = self.project_root / "scripts"
+        self.docs_path = self.project_root / "docs"
 
-        # 创建输出目录
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        # 创建必要的输出目录
+        self.ensure_directories()
+
+        # 设置日志
+        self.setup_logging()
 
         # 初始化UI
         self.setup_ui()
 
         # 连接信号槽
         self.connect_signals()
+
+    def ensure_directories(self):
+        """确保必要的目录存在"""
+        directories = [
+            self.results_path / "images",
+            self.results_path / "videos",
+            self.results_path / "camera",
+            self.outputs_path / "models",
+            self.outputs_path / "logs",
+            self.outputs_path / "results"
+        ]
+
+        for directory in directories:
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def setup_logging(self):
+        """设置日志系统"""
+        log_file = self.outputs_path / "logs" / f"yolovision_{datetime.datetime.now().strftime('%Y%m%d')}.log"
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
 
     def setup_ui(self):
         """设置UI界面"""
@@ -147,16 +183,17 @@ class YOLODetectionUI(QMainWindow):
         self.model_group.setStyleSheet("QGroupBox { font-weight: bold; }")
         self.model_layout = QtWidgets.QVBoxLayout()
 
-        # 模型选择
-        self.model_combo = QtWidgets.QComboBox()
+        # 模型类型选择
+        model_type_layout = QtWidgets.QHBoxLayout()
+        model_type_layout.addWidget(QtWidgets.QLabel("模型类型:"))
+        self.model_type_combo = QtWidgets.QComboBox()
+        self.model_type_combo.addItems(["预训练模型", "自定义配置"])
+        model_type_layout.addWidget(self.model_type_combo)
+        self.model_layout.addLayout(model_type_layout)
 
-        # 从models目录加载模型文件
-        model_files = self.get_model_files()
-        if model_files:
-            self.model_combo.addItems(model_files)
-        else:
-            self.model_combo.addItems(["yolov8s-seg.pt"])
-        self.model_combo.setCurrentIndex(0)
+        # 模型/配置选择
+        self.model_combo = QtWidgets.QComboBox()
+        self.update_model_options()
 
         # 加载模型按钮
         self.load_model_btn = QtWidgets.QPushButton(" 加载模型")
@@ -166,10 +203,44 @@ class YOLODetectionUI(QMainWindow):
             "QPushButton:hover { background-color: #45a049; }"
         )
 
+        # 模型信息显示
+        self.model_info_label = QtWidgets.QLabel("未加载模型")
+        self.model_info_label.setStyleSheet("color: #666; font-size: 10px;")
+        self.model_info_label.setWordWrap(True)
+
+        self.model_layout.addWidget(QtWidgets.QLabel("选择模型/配置:"))
         self.model_layout.addWidget(self.model_combo)
         self.model_layout.addWidget(self.load_model_btn)
+        self.model_layout.addWidget(self.model_info_label)
         self.model_group.setLayout(self.model_layout)
         self.right_layout.addWidget(self.model_group)
+
+    def update_model_options(self):
+        """更新模型选项"""
+        self.model_combo.clear()
+
+        if self.model_type_combo.currentText() == "预训练模型":
+            # 加载预训练模型文件
+            model_files = self.get_model_files()
+            if model_files:
+                self.model_combo.addItems(model_files)
+            else:
+                self.model_combo.addItems(["yolov8s.pt", "yolov8m.pt", "yolov8l.pt"])
+        else:
+            # 加载配置文件
+            config_files = self.get_config_files()
+            if config_files:
+                self.model_combo.addItems(config_files)
+            else:
+                self.model_combo.addItems(["yolov8s-drone.yaml"])
+
+    def get_config_files(self):
+        """获取配置文件列表"""
+        config_files = []
+        if self.configs_path.exists():
+            for file in self.configs_path.glob("*.yaml"):
+                config_files.append(file.name)
+        return sorted(config_files)
 
     def setup_param_group(self):
         """设置参数设置组"""
@@ -345,6 +416,7 @@ class YOLODetectionUI(QMainWindow):
 
     def connect_signals(self):
         """连接信号槽"""
+        self.model_type_combo.currentTextChanged.connect(self.update_model_options)
         self.load_model_btn.clicked.connect(self.load_model)
         self.image_btn.clicked.connect(self.detect_image)
         self.video_btn.clicked.connect(self.detect_video)
@@ -358,32 +430,69 @@ class YOLODetectionUI(QMainWindow):
     def get_model_files(self):
         """获取models目录下的模型文件"""
         model_files = []
-        if os.path.exists(self.models_path):
-            for file in os.listdir(self.models_path):
-                if file.endswith('.pt'):
-                    model_files.append(file)
-        return model_files
+        if self.models_path.exists():
+            for file in self.models_path.glob("*.pt"):
+                model_files.append(file.name)
+        return sorted(model_files)
 
     def load_model(self):
         """加载YOLO模型"""
-        model_name = self.model_combo.currentText().split(" ")[0]
-        model_path = os.path.join(self.models_path, model_name)
-
         try:
-            # 检查模型文件是否存在
-            if not os.path.exists(model_path):
-                # 如果模型文件不在models目录中，尝试直接加载（可能是相对路径或绝对路径）
-                self.model = YOLO(model_name)
-            else:
-                # 从models目录加载模型
-                self.model = YOLO(model_path)
+            model_name = self.model_combo.currentText()
 
-            self.statusbar.showMessage(f"模型 {model_name} 加载成功", 3000)
+            if self.model_type_combo.currentText() == "预训练模型":
+                # 加载预训练模型
+                model_path = self.models_path / model_name
+
+                if model_path.exists():
+                    self.model = YOLO(str(model_path))
+                    self.current_config = None
+                    model_info = f"预训练模型: {model_name}"
+                else:
+                    # 尝试从 ultralytics 下载
+                    self.model = YOLO(model_name)
+                    self.current_config = None
+                    model_info = f"在线模型: {model_name}"
+
+            else:
+                # 加载自定义配置
+                config_path = self.configs_path / model_name
+
+                if config_path.exists():
+                    # 读取配置文件信息
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config_data = yaml.safe_load(f)
+
+                    self.model = YOLO(str(config_path))
+                    self.current_config = config_data
+
+                    # 显示配置信息
+                    if 'nc' in config_data:
+                        model_info = f"自定义配置: {model_name}\n类别数: {config_data['nc']}"
+                    else:
+                        model_info = f"自定义配置: {model_name}"
+
+                    # 特别标识 Drone-YOLO
+                    if 'drone' in model_name.lower():
+                        model_info += "\n🚁 Drone-YOLO (小目标优化)"
+                else:
+                    raise FileNotFoundError(f"配置文件不存在: {config_path}")
+
+            # 更新UI状态
+            self.model_info_label.setText(model_info)
+            self.statusbar.showMessage(f"模型加载成功: {model_name}", 3000)
             self.image_btn.setEnabled(True)
             self.video_btn.setEnabled(True)
             self.camera_btn.setEnabled(True)
+
+            # 记录日志
+            self.logger.info(f"模型加载成功: {model_name}")
+
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"模型加载失败: {str(e)}")
+            error_msg = f"模型加载失败: {str(e)}"
+            QMessageBox.critical(self, "错误", error_msg)
+            self.model_info_label.setText("模型加载失败")
+            self.logger.error(error_msg)
 
     def update_conf_value(self):
         """更新置信度值显示"""
@@ -496,15 +605,14 @@ class YOLODetectionUI(QMainWindow):
                 height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
                 # 创建视频结果目录
-                video_results_dir = os.path.join(self.results_path, "videos")
-                if not os.path.exists(video_results_dir):
-                    os.makedirs(video_results_dir)
+                video_results_dir = self.results_path / "videos"
+                video_results_dir.mkdir(parents=True, exist_ok=True)
 
                 # 创建视频写入器
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_file = os.path.join(video_results_dir, f"output_{timestamp}.mp4")
+                output_file = video_results_dir / f"output_{timestamp}.mp4"
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                self.video_writer = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
+                self.video_writer = cv2.VideoWriter(str(output_file), fourcc, fps, (width, height))
 
                 # 启用停止按钮，禁用其他按钮
                 self.stop_btn.setEnabled(True)
@@ -537,15 +645,14 @@ class YOLODetectionUI(QMainWindow):
             height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
             # 创建摄像头结果目录
-            camera_results_dir = os.path.join(self.results_path, "camera")
-            if not os.path.exists(camera_results_dir):
-                os.makedirs(camera_results_dir)
+            camera_results_dir = self.results_path / "camera"
+            camera_results_dir.mkdir(parents=True, exist_ok=True)
 
             # 创建视频写入器
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = os.path.join(camera_results_dir, f"camera_{timestamp}.mp4")
+            output_file = camera_results_dir / f"camera_{timestamp}.mp4"
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.video_writer = cv2.VideoWriter(output_file, fourcc, 20, (width, height))
+            self.video_writer = cv2.VideoWriter(str(output_file), fourcc, 20, (width, height))
 
             # 启用停止按钮，禁用其他按钮
             self.stop_btn.setEnabled(True)
@@ -634,15 +741,14 @@ class YOLODetectionUI(QMainWindow):
             return
 
         # 创建图片结果目录
-        image_results_dir = os.path.join(self.results_path, "images")
-        if not os.path.exists(image_results_dir):
-            os.makedirs(image_results_dir)
+        image_results_dir = self.results_path / "images"
+        image_results_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         default_name = f"result_{timestamp}.jpg"
 
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "保存结果", os.path.join(image_results_dir, default_name),
+            self, "保存结果", str(image_results_dir / default_name),
             "图片文件 (*.jpg *.jpeg *.png *.bmp);;所有文件 (*)"
         )
 
@@ -650,10 +756,21 @@ class YOLODetectionUI(QMainWindow):
             try:
                 # 保存检测结果图像
                 cv2.imwrite(file_path, cv2.cvtColor(self.current_result, cv2.COLOR_RGB2BGR))
+
+                # 同时保存到 outputs/results 目录
+                outputs_results_dir = self.outputs_path / "results"
+                outputs_results_dir.mkdir(parents=True, exist_ok=True)
+                backup_path = outputs_results_dir / f"result_{timestamp}.jpg"
+                cv2.imwrite(str(backup_path), cv2.cvtColor(self.current_result, cv2.COLOR_RGB2BGR))
+
                 self.statusbar.showMessage(f"结果已保存至: {file_path}", 3000)
+                self.logger.info(f"检测结果已保存: {file_path}")
+
             except Exception as e:
-                QMessageBox.critical(self, "错误", f"保存结果失败: {str(e)}")
+                error_msg = f"保存结果失败: {str(e)}"
+                QMessageBox.critical(self, "错误", error_msg)
                 self.statusbar.showMessage("保存结果失败", 3000)
+                self.logger.error(error_msg)
 
     def closeEvent(self, event):
         """窗口关闭事件"""
