@@ -1,28 +1,37 @@
 # 🚁 YOLOvision Pro
 
+**专业的目标检测开发工具链**
+
 ## 1. 概述
 
 YOLOvision Pro 是一个完整的YOLO目标检测解决方案，专注于小目标检测优化，特别是无人机场景下的目标检测。项目包含从数据标注、模型训练到模型应用的全流程工具，并实现了先进的 Drone-YOLO 算法。
 
-### 主要特性
+### 🌟 主要特性
 
 1. **🎯 Drone-YOLO 算法** - 基于 YOLOv8 优化的小目标检测模型
    - RepVGGBlock 高效主干网络
-   - P2 小目标检测头
-   - 三明治融合结构
+   - P2 小目标检测头（160×160 高分辨率特征图）
+   - 三明治融合结构，显著提升小目标检测性能
 
 2. **🖥️ YOLOv8 检测系统** - 基于PyQt5的图形界面应用
    - 多种输入源支持（图片/视频/摄像头）
    - 实时参数调节和结果可视化
+   - 自动结果保存和管理
 
 3. **🏷️ 数据标注工具链** - 完整的数据准备流程
    - LabelMe 标注工具集成
    - 自动格式转换和数据集划分
+   - 支持多种标注格式转换
 
 4. **🚁 VisDrone 数据集处理** - 专业的 VisDrone2019 数据集处理工具
    - 一键格式转换（VisDrone → YOLO）
-   - 智能数据集划分和验证
-   - 详细统计分析和可视化
+   - 智能数据集划分和验证（8:1:1 比例）
+   - 详细统计分析和可视化报告
+
+5. **🔧 模块化脚本系统** - 重新组织的脚本架构
+   - 按功能分类的清晰目录结构
+   - 完善的验证和检查工具
+   - 丰富的演示和可视化脚本
 
 ## 2. 项目架构
 
@@ -36,17 +45,32 @@ yolovision_pro/
 │   ├── technical_analysis/      # 技术分析文档
 │   ├── tutorials/              # 教程指南
 │   └── references/             # 参考资料
-├── 🔧 scripts/                  # 脚本目录
+├── 🔧 scripts/                  # 脚本目录（已重新组织）
 │   ├── data_processing/        # 数据处理脚本
-│   │   ├── visdrone/          # VisDrone 专用工具
+│   │   ├── visdrone/          # VisDrone2019 专用处理工具
+│   │   │   ├── convert_visdrone.py        # 格式转换
+│   │   │   ├── split_visdrone_dataset.py  # 数据集划分
+│   │   │   ├── validate_visdrone_dataset.py # 数据验证
+│   │   │   └── process_visdrone_complete.py # 一键处理
 │   │   ├── general/           # 通用数据处理工具
-│   │   └── demos/             # 数据处理演示
+│   │   │   ├── labelme2yolo.py           # LabelMe转YOLO
+│   │   │   └── split_dataset.py          # 通用数据集划分
+│   │   └── demos/             # 数据处理演示脚本
 │   ├── validation/             # 验证和检查工具
-│   ├── training/               # 训练脚本
+│   │   ├── verify_local_ultralytics.py  # 完整配置验证
+│   │   ├── quick_check.py               # 快速检查
+│   │   ├── simple_check.py              # 简化版检查
+│   │   └── test_visdrone_conversion.py  # VisDrone转换测试
+│   ├── training/               # 训练脚本（规划中）
 │   ├── testing/                # 测试脚本
+│   │   └── test_drone_yolo.py           # Drone-YOLO测试
 │   ├── demo/                   # 演示脚本
+│   │   └── drone_yolo_demo.py           # 核心概念演示
 │   ├── visualization/          # 可视化脚本
+│   │   └── visualize_drone_yolo.py      # 架构可视化
 │   └── docs/                   # 脚本文档
+│       ├── VisDrone工具说明.md          # VisDrone工具文档
+│       └── 验证工具说明.md              # 验证工具文档
 ├── 🎨 assets/                   # 资源目录
 │   ├── images/                 # 图片资源（架构图、结果图等）
 │   ├── configs/                # 配置文件
@@ -77,7 +101,14 @@ yolovision_pro/
 ### 📖 目录说明
 
 - **📚 docs/**: 包含技术文档、教程和参考资料 → [查看详情](docs/README.md)
-- **🔧 scripts/**: 各种功能脚本，包括演示、测试、可视化等 → [查看详情](scripts/README.md)
+- **🔧 scripts/**: 重新组织的功能脚本，按类型分类管理 → [查看详情](scripts/README.md)
+  - `data_processing/`: VisDrone 和通用数据处理工具
+  - `validation/`: 环境验证和配置检查工具
+  - `training/`: 模型训练相关脚本（规划中）
+  - `testing/`: 功能测试和验证脚本
+  - `demo/`: 核心概念和功能演示
+  - `visualization/`: 架构图和结果可视化
+  - `docs/`: 脚本使用文档和说明
 - **🎨 assets/**: 项目资源文件，包括配置、图片、数据样本 → [查看详情](assets/README.md)
 - **🧪 experiments/**: 实验配置和结果，支持系统性研究 → [查看详情](experiments/README.md)
 - **📊 outputs/**: 训练输出、日志和结果文件 → [查看详情](outputs/README.md)
@@ -113,6 +144,9 @@ Drone-YOLO 是基于 YOLOv8 优化的小目标检测算法，专门针对无人�
 ### 3.3 快速开始
 
 ```bash
+# 环境检查（推荐首先执行）
+python scripts/validation/simple_check.py
+
 # 测试 Drone-YOLO 模型
 python scripts/testing/test_drone_yolo.py
 
@@ -137,6 +171,9 @@ YOLOvision Pro 提供了完整的 VisDrone2019 数据集处理工具链：
 ### 4.2 快速开始
 
 ```bash
+# 环境检查（推荐首先执行）
+python scripts/validation/simple_check.py
+
 # 一键处理 VisDrone 数据集（推荐）
 python scripts/data_processing/visdrone/process_visdrone_complete.py \
     --input data/VisDrone2019-DET-train \
@@ -167,7 +204,7 @@ python scripts/data_processing/demos/demo_visdrone_processing.py
 | 9 | 8 | bus (公交车) |
 | 10 | 9 | motor (摩托车) |
 
-详细文档: [VisDrone 处理工具说明](scripts/README_VisDrone.md)
+详细文档: [VisDrone 处理工具说明](scripts/docs/VisDrone工具说明.md)
 
 ## 5. YOLOv8目标检测系统
 
@@ -258,12 +295,12 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 
 3. **转换为YOLO格式**：
    ```bash
-   python scripts/labelme2yolo.py
+   python scripts/data_processing/general/labelme2yolo.py
    ```
 
 4. **划分数据集**：
    ```bash
-   python scripts/split_dataset.py
+   python scripts/data_processing/general/split_dataset.py
    ```
 
 ### 6.3 模型训练
@@ -274,25 +311,58 @@ YOLOv8目标检测系统是一个基于PyQt5开发的图形界面应用，提供
 # 训练标准 YOLOv8 模型
 yolo task=detect mode=train model=yolov8s.pt data=data/yolo_dataset/data.yaml epochs=100 imgsz=640
 
-# 训练 Drone-YOLO 模型
-python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-drone.yaml --data data/yolo_dataset/data.yaml
+# 使用 VisDrone 数据集训练
+yolo task=detect mode=train model=yolov8s.pt data=data/visdrone_yolo/data.yaml epochs=300 imgsz=640
+
+# 训练 Drone-YOLO 模型（规划中）
+# python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-drone.yaml --data data/visdrone_yolo/data.yaml
 ```
 
 训练完成后，将生成的模型文件（如best.pt）放入`models/`目录，即可在UI界面中使用。
 
-## 7. 项目文档
+## 7. 📚 项目文档
 
 详细文档分布在以下目录：
 
-- **📚 docs/**: 完整的技术文档和教程 → [查看详情](docs/README.md)
-- **📖 doc/**: 传统文档目录
+### 🔧 脚本文档
+- **Scripts 总览**: [脚本目录使用指南](scripts/README.md) - 重新组织后的完整脚本系统
+- **VisDrone 工具**: [VisDrone 处理工具说明](scripts/docs/VisDrone工具说明.md) - 专业数据集处理
+- **验证工具**: [验证工具说明](scripts/docs/验证工具说明.md) - 环境配置检查
+
+### 📚 技术文档
+- **完整文档**: [技术文档和教程](docs/README.md) - 深入的技术分析和指南
+- **VisDrone 总结**: [VisDrone 数据集处理工具总结](docs/VisDrone数据集处理工具总结.md)
+- **传统文档**: `doc/` 目录
   - `ui_guide.md`：UI界面使用指南
   - `development_guide.md`：开发者指南
-- **🚁 VisDrone 工具**: VisDrone 数据集处理工具文档
-  - [VisDrone 处理工具说明](scripts/docs/VisDrone工具说明.md)
-  - [VisDrone 数据集处理工具总结](docs/VisDrone数据集处理工具总结.md)
 
-## 8. 贡献与支持
+### 🎯 快速入门建议
+1. **新用户**: 先阅读 [Scripts 使用指南](scripts/README.md)
+2. **数据处理**: 参考 [VisDrone 工具说明](scripts/docs/VisDrone工具说明.md)
+3. **环境配置**: 使用 [验证工具](scripts/docs/验证工具说明.md)
+4. **深入学习**: 查看 [完整技术文档](docs/README.md)
+
+## 8. 📢 重要更新说明
+
+### 🔄 Scripts 目录重组（最新）
+项目的 `scripts/` 目录已经重新组织，提供更清晰的结构：
+
+- **旧路径** → **新路径**
+- `scripts/convert_visdrone.py` → `scripts/data_processing/visdrone/convert_visdrone.py`
+- `scripts/verify_local_ultralytics.py` → `scripts/validation/verify_local_ultralytics.py`
+- `scripts/labelme2yolo.py` → `scripts/data_processing/general/labelme2yolo.py`
+
+### ✅ 兼容性保证
+- 所有脚本功能保持不变
+- 只需要更新脚本路径即可
+- 详细迁移指南请参考 [Scripts README](scripts/README.md)
+
+### 🆕 新增功能
+- 简化版环境检查脚本：`scripts/validation/simple_check.py`
+- 完善的目录文档和使用说明
+- 更好的错误处理和用户体验
+
+## 9. 🤝 贡献与支持
 
 欢迎提交问题报告和功能建议。如需贡献代码，请遵循以下步骤：
 
@@ -301,3 +371,13 @@ python scripts/training/train_drone_yolo.py --config assets/configs/yolov8s-dron
 3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
 4. 推送到分支 (`git push origin feature/amazing-feature`)
 5. 打开一个Pull Request
+
+### 📞 技术支持
+- 查看 [Scripts 使用指南](scripts/README.md) 了解最新功能
+- 运行 `python scripts/validation/simple_check.py` 进行环境诊断
+- 参考 [常见问题解答](scripts/README.md#常见问题解答)
+
+---
+
+**YOLOvision Pro Team**
+*专业的目标检测开发工具链*

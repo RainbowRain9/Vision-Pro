@@ -27,12 +27,60 @@
 - 所有脚本功能保持不变
 - 命令行参数和使用方法不变
 - 只需要更新脚本路径即可
+- **新增统一工具系统，提供更简洁的使用方式**
+
+### 🔧 统一工具系统
+
+为了解决脚本过多且分散的问题，我们新增了统一的工具管理系统：
+
+#### 📋 三种使用方式
+
+1. **🔧 统一工具入口** (`yolo_tools.py`)
+   - 支持所有功能的子命令模式
+   - 清晰的命令分类和参数传递
+   - 完整的帮助系统
+
+2. **📱 简化运行器** (`run.py`)
+   - 交互式菜单界面
+   - 快速命令行模式
+   - 适合新用户和日常使用
+
+3. **⚡ 快捷命令** (`quick_commands.py`)
+   - 预设的常用操作组合
+   - 一键执行复杂工作流程
+   - 减少重复的参数输入
+
+#### 🎯 推荐使用流程
+
+```bash
+# 1. 环境检查
+python scripts/run.py check
+# 或
+python scripts/yolo_tools.py validation check
+
+# 2. VisDrone 数据处理
+python scripts/quick_commands.py visdrone-full
+# 或
+python scripts/run.py visdrone
+
+# 3. 模型开发和测试
+python scripts/quick_commands.py demo-all
+# 或
+python scripts/run.py demo
+```
 
 ## 📁 目录结构
 
 ```
 scripts/
 ├── README.md                          # 主说明文档
+├── 🔧 yolo_tools.py                   # 统一工具入口（新增）
+├── 📱 run.py                          # 简化运行器（新增）
+├── ⚡ quick_commands.py               # 快捷命令（新增）
+├── modules/                           # 功能模块（新增）
+│   ├── __init__.py
+│   ├── visdrone_module.py            # VisDrone 模块化接口
+│   └── validation_module.py          # 验证模块化接口
 ├── data_processing/                   # 数据处理脚本
 │   ├── README.md                      # 数据处理总览
 │   ├── visdrone/                      # VisDrone2019 数据集专用工具
@@ -139,15 +187,46 @@ scripts/
 
 ## 🎯 快速开始
 
-### 🔧 环境检查（推荐首先执行）
+### ⚡ 统一工具入口（推荐）
+
+**新增统一工具系统！** 现在可以通过统一入口访问所有功能：
+
 ```bash
-# 简化版配置检查（推荐，避免编码问题）
+# 🔧 统一工具入口 - 支持所有功能的子命令模式
+python scripts/yolo_tools.py <command> <subcommand> [options]
+
+# 📱 简化运行器 - 交互式菜单或快速命令
+python scripts/run.py                    # 交互式菜单
+python scripts/run.py check              # 快速环境检查
+python scripts/run.py visdrone           # 快速 VisDrone 处理
+
+# ⚡ 快捷命令 - 预设的常用操作组合
+python scripts/quick_commands.py setup           # 环境初始化
+python scripts/quick_commands.py visdrone-full   # VisDrone 完整处理
+```
+
+### 🔧 环境检查（推荐首先执行）
+
+**新方式（推荐）：**
+```bash
+# 统一工具方式
+python scripts/yolo_tools.py validation check    # 简化检查
+python scripts/yolo_tools.py validation quick    # 快速检查
+python scripts/yolo_tools.py validation full     # 完整验证
+
+# 快捷命令方式
+python scripts/quick_commands.py setup           # 环境初始化
+python scripts/quick_commands.py check-all       # 完整系统检查
+
+# 简化运行器方式
+python scripts/run.py check                      # 快速检查
+```
+
+**传统方式（仍然支持）：**
+```bash
+# 直接调用脚本（向后兼容）
 python scripts/validation/simple_check.py
-
-# 快速配置检查
 python scripts/validation/quick_check.py
-
-# 完整配置验证
 python scripts/validation/verify_local_ultralytics.py
 
 # PowerShell 自动化验证（Windows）
@@ -155,23 +234,45 @@ python scripts/validation/verify_local_ultralytics.py
 ```
 
 ### 📊 VisDrone 数据处理工作流程
+
+**新方式（推荐）：**
 ```bash
-# 方法1: 一键处理（推荐）
+# 🔧 统一工具方式
+python scripts/yolo_tools.py visdrone process \
+    --input data/VisDrone2019-DET-train \
+    --output data/visdrone_yolo \
+    --verbose
+
+# ⚡ 快捷命令方式
+python scripts/quick_commands.py visdrone-full    # 完整处理（含可视化）
+python scripts/quick_commands.py visdrone-quick   # 快速处理（无可视化）
+
+# 📱 简化运行器方式
+python scripts/run.py visdrone                    # 交互式处理
+python scripts/run.py visdrone data/input data/output  # 命令行处理
+
+# 🔧 分步处理（统一工具）
+python scripts/yolo_tools.py visdrone convert --input data/VisDrone2019-DET-train --output data/visdrone_yolo
+python scripts/yolo_tools.py visdrone split --input data/visdrone_yolo --output data/visdrone_yolo
+python scripts/yolo_tools.py visdrone validate --dataset data/visdrone_yolo --visualize
+
+# 🎭 查看演示
+python scripts/yolo_tools.py visdrone demo
+```
+
+**传统方式（仍然支持）：**
+```bash
+# 方法1: 一键处理
 python scripts/data_processing/visdrone/process_visdrone_complete.py \
     --input data/VisDrone2019-DET-train \
     --output data/visdrone_yolo \
     --verbose
 
 # 方法2: 分步处理
-# 步骤1: 格式转换
 python scripts/data_processing/visdrone/convert_visdrone.py \
     -i data/VisDrone2019-DET-train -o data/visdrone_yolo
-
-# 步骤2: 数据集划分
 python scripts/data_processing/visdrone/split_visdrone_dataset.py \
     -i data/visdrone_yolo -o data/visdrone_yolo
-
-# 步骤3: 数据集验证
 python scripts/data_processing/visdrone/validate_visdrone_dataset.py \
     -d data/visdrone_yolo --visualize
 
@@ -180,6 +281,22 @@ python scripts/data_processing/demos/demo_visdrone_processing.py
 ```
 
 ### 🚀 模型开发工作流程
+
+**新方式（推荐）：**
+```bash
+# 🔧 统一工具方式
+python scripts/yolo_tools.py demo test-model        # Drone-YOLO 测试
+python scripts/yolo_tools.py viz architecture       # 架构可视化
+python scripts/yolo_tools.py demo drone-yolo        # 核心概念演示
+
+# ⚡ 快捷命令方式
+python scripts/quick_commands.py demo-all           # 运行所有演示
+
+# 📱 简化运行器方式
+python scripts/run.py demo                          # 交互式演示菜单
+```
+
+**传统方式（仍然支持）：**
 ```bash
 # 1. 运行 Drone-YOLO 测试
 python scripts/testing/test_drone_yolo.py
@@ -195,6 +312,15 @@ yolo train data=data/visdrone_yolo/data.yaml model=yolov8s.pt epochs=100
 ```
 
 ### 🔧 通用数据处理
+
+**新方式（推荐）：**
+```bash
+# 🔧 统一工具方式
+python scripts/yolo_tools.py data labelme2yolo      # LabelMe 转 YOLO
+python scripts/yolo_tools.py data split             # 通用数据集划分
+```
+
+**传统方式（仍然支持）：**
 ```bash
 # LabelMe 转 YOLO 格式
 python scripts/data_processing/general/labelme2yolo.py
@@ -221,16 +347,26 @@ python scripts/data_processing/general/split_dataset.py
 ## 💡 使用建议
 
 ### 🆕 新用户入门
-1. **环境检查**: 先运行 `scripts/validation/simple_check.py` 检查环境配置
-2. **了解功能**: 查看 `scripts/data_processing/demos/demo_visdrone_processing.py` 了解数据处理流程
-3. **阅读文档**: 查看 `scripts/docs/` 目录下的详细文档
-4. **实践操作**: 使用 VisDrone 数据集进行完整的处理流程体验
+1. **快速开始**: 运行 `python scripts/run.py` 进入交互式菜单
+2. **环境检查**: 使用 `python scripts/run.py check` 或 `python scripts/yolo_tools.py validation check`
+3. **了解功能**: 运行 `python scripts/quick_commands.py demo-all` 查看所有演示
+4. **阅读文档**: 查看 `scripts/docs/` 目录下的详细文档
+5. **实践操作**: 使用 `python scripts/quick_commands.py visdrone-full` 体验完整流程
 
 ### 👨‍💻 日常开发
-1. **环境验证**: 定期使用 `scripts/validation/` 目录下的工具进行环境检查
-2. **数据处理**: 利用 `scripts/data_processing/` 工具处理新的数据集
-3. **功能测试**: 通过 `scripts/testing/` 和 `scripts/demo/` 验证功能正确性
-4. **结果可视化**: 使用 `scripts/visualization/` 生成分析图表
+1. **统一入口**: 优先使用 `python scripts/yolo_tools.py` 统一工具
+2. **快捷操作**: 使用 `python scripts/quick_commands.py` 执行常用组合操作
+3. **交互模式**: 使用 `python scripts/run.py` 进行交互式操作
+4. **传统方式**: 需要时仍可直接调用具体脚本文件
+
+### 🔄 迁移指南
+**从传统方式迁移到统一工具系统：**
+
+| 传统方式 | 统一工具方式 | 快捷命令方式 |
+|----------|-------------|-------------|
+| `python scripts/validation/simple_check.py` | `python scripts/yolo_tools.py validation check` | `python scripts/run.py check` |
+| `python scripts/data_processing/visdrone/process_visdrone_complete.py` | `python scripts/yolo_tools.py visdrone process` | `python scripts/quick_commands.py visdrone-full` |
+| `python scripts/demo/drone_yolo_demo.py` | `python scripts/yolo_tools.py demo drone-yolo` | `python scripts/quick_commands.py demo-all` |
 
 ### 🔧 问题排查
 1. **查看文档**: 检查 `scripts/docs/` 目录下的详细文档
