@@ -10,7 +10,7 @@ names:
 - bus
 - motor
 nc: 10
-path: D:\Code\yolovision_pro\data\visdrone_yolo
+path: D:\Code\Vision-Pro\data\visdrone_yolo
 test: images/test
 train: images/train
 val: images/val

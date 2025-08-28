@@ -12,6 +12,7 @@ import datetime
 import logging
 import yaml
 from pathlib import Path
+from typing import Dict, Any
 from ultralytics import YOLO
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt, QTimer
@@ -53,6 +54,11 @@ class YOLODetectionUI(QMainWindow):
         self.video_writer = None
         self.current_config = None
 
+        # Supervision 集成
+        self.supervision_wrapper = None
+        self.supervision_enabled = False
+        self.supervision_analyzer = None
+
         # 设置项目路径 - 适应新的目录结构
         self.project_root = Path(__file__).parent
         self.models_path = self.project_root / "models"
@@ -73,6 +79,9 @@ class YOLODetectionUI(QMainWindow):
 
         # 连接信号槽
         self.connect_signals()
+
+        # 初始化 Supervision
+        self.init_supervision()
 
     def ensure_directories(self):
         """确保必要的目录存在"""
@@ -550,6 +559,12 @@ class YOLODetectionUI(QMainWindow):
             "图片文件 (*.jpg *.jpeg *.png *.bmp);;所有文件 (*)"
         )
         if file_path:
+            # 如果启用了 Supervision，使用增强检测
+            if self.supervision_enabled and self.supervision_wrapper:
+                self.detect_image_with_supervision(file_path)
+                return
+
+            # 原始检测方法（向后兼容）
             try:
                 # 读取图片
                 img = cv2.imread(file_path)
@@ -771,6 +786,106 @@ class YOLODetectionUI(QMainWindow):
                 QMessageBox.critical(self, "错误", error_msg)
                 self.statusbar.showMessage("保存结果失败", 3000)
                 self.logger.error(error_msg)
+
+    def init_supervision(self):
+        """初始化 Supervision 功能"""
+        try:
+            from scripts.modules.supervision_wrapper import SupervisionWrapper, SupervisionAnalyzer
+
+            # VisDrone 类别名称
+            visdrone_classes = [
+                'pedestrian', 'people', 'bicycle', 'car', 'van',
+                'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor'
+            ]
+
+            self.supervision_wrapper = SupervisionWrapper(class_names=visdrone_classes)
+            self.supervision_analyzer = SupervisionAnalyzer()
+            self.supervision_enabled = True
+
+            self.statusbar.showMessage("Supervision 增强功能已启用", 3000)
+            self.logger.info("Supervision 集成成功")
+
+        except ImportError as e:
+            self.supervision_enabled = False
+            self.logger.warning(f"Supervision 未安装或导入失败: {e}")
+            QMessageBox.information(
+                self, "提示",
+                "Supervision 功能未启用\n"
+                "如需使用增强可视化功能，请安装: pip install supervision"
+            )
+        except Exception as e:
+            self.supervision_enabled = False
+            self.logger.error(f"Supervision 初始化失败: {e}")
+
+    def detect_image_with_supervision(self, file_path: str):
+        """使用 Supervision 增强的图像检测"""
+        try:
+            # 读取图片
+            img = cv2.imread(file_path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            # 显示原始图片
+            self.display_image(img, self.original_img_label)
+            self.current_image = img.copy()
+
+            # 检测图片
+            conf = self.conf_slider.value() / 100
+            iou = self.iou_slider.value() / 100
+
+            self.statusbar.showMessage("正在使用 Supervision 增强检测...")
+            QtWidgets.QApplication.processEvents()
+
+            # YOLO 检测
+            results = self.model.predict(img, conf=conf, iou=iou)
+
+            # Supervision 增强处理
+            processed_result = self.supervision_wrapper.process_ultralytics_results(
+                results[0], img
+            )
+
+            # 显示增强结果
+            enhanced_image = processed_result['annotated_image']
+            self.display_image(enhanced_image, self.result_img_label)
+            self.current_result = enhanced_image.copy()
+
+            # 更新结果表格（使用原始结果）
+            self.update_result_table(results[0])
+
+            # 添加到分析器
+            self.supervision_analyzer.add_detection_result(processed_result)
+
+            # 显示统计信息
+            self.show_supervision_statistics(processed_result['statistics'])
+
+            self.save_btn.setEnabled(True)
+            detection_count = processed_result['detection_count']
+            self.statusbar.showMessage(
+                f"Supervision 增强检测完成: {os.path.basename(file_path)} "
+                f"(检测到 {detection_count} 个目标)", 3000
+            )
+
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"Supervision 检测失败: {str(e)}")
+            self.statusbar.showMessage("Supervision 检测失败", 3000)
+            self.logger.error(f"Supervision 检测错误: {e}")
+
+    def show_supervision_statistics(self, statistics: Dict):
+        """显示 Supervision 统计信息"""
+        if not statistics:
+            return
+
+        # 生成统计摘要
+        summary = self.supervision_wrapper.generate_detection_summary(statistics)
+
+        # 在状态栏显示简要信息
+        total = statistics.get('total_detections', 0)
+        avg_conf = statistics.get('confidence_stats', {}).get('mean', 0)
+
+        status_msg = f"检测统计: {total} 个目标, 平均置信度: {avg_conf:.3f}"
+        self.statusbar.showMessage(status_msg, 5000)
+
+        # 记录详细统计到日志
+        self.logger.info(f"检测统计信息:\n{summary}")
 
     def closeEvent(self, event):
         """窗口关闭事件"""

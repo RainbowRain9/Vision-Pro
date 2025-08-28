@@ -1,0 +1,3 @@
+[submodule "supervision"]
+	path = supervision
+	url = https://github.com/roboflow/supervision.git
