@@ -3,28 +3,30 @@
 """
 Supervision 功能包装器
 为 YOLOvision Pro 提供增强的可视化和分析功能
+支持小目标检测的 InferenceSlicer 功能
 """
 
 import cv2
 import numpy as np
 import supervision as sv
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Callable
 import logging
 from pathlib import Path
+import time
 
 
 class SupervisionWrapper:
-    """Supervision 功能统一包装器"""
-    
+    """Supervision 功能统一包装器，支持小目标检测"""
+
     def __init__(self, class_names: Optional[List[str]] = None):
         """
         初始化 Supervision 包装器
-        
+
         Args:
             class_names: 类别名称列表
         """
         self.class_names = class_names or []
-        
+
         # 初始化标注器 (适配 Supervision 0.26.1+ API)
         try:
             # 尝试新版本 API
@@ -38,7 +40,7 @@ class SupervisionWrapper:
             # 回退到更简单的初始化
             self.box_annotator = sv.BoxAnnotator()
             self.label_annotator = sv.LabelAnnotator()
-        
+
         # 初始化颜色调色板 (适配新版本 API)
         try:
             self.color_palette = sv.ColorPalette.default()
@@ -51,8 +53,17 @@ class SupervisionWrapper:
 
         # 性能指标 (使用自定义实现，因为 DetectionMetrics 在新版本中不可用)
         self.detection_metrics = {}
-        
-        logging.info("Supervision 包装器初始化完成")
+
+        # 小目标检测配置
+        self.small_object_config = {
+            'slice_wh': (640, 640),  # 切片尺寸
+            'overlap_wh': (128, 128),  # 重叠尺寸
+            'iou_threshold': 0.5,  # NMS IoU 阈值
+            'overlap_filter': sv.OverlapFilter.NON_MAX_SUPPRESSION,
+            'thread_workers': 1  # 线程数
+        }
+
+        logging.info("Supervision 包装器初始化完成（支持小目标检测）")
     
     def process_ultralytics_results(self, results, image: np.ndarray) -> Dict[str, Any]:
         """
@@ -201,8 +212,119 @@ class SupervisionWrapper:
             metrics['avg_confidence'] = float(np.mean(detections.confidence))
         
         return metrics
-    
-    def create_comparison_view(self, original: np.ndarray, 
+
+    def detect_small_objects(self, image: np.ndarray, model,
+                           conf: float = 0.25, iou: float = 0.45,
+                           slice_wh: Optional[Tuple[int, int]] = None,
+                           overlap_wh: Optional[Tuple[int, int]] = None) -> Dict[str, Any]:
+        """
+        使用 InferenceSlicer 进行小目标检测
+
+        Args:
+            image: 输入图像
+            model: YOLO 模型
+            conf: 置信度阈值
+            iou: IoU 阈值
+            slice_wh: 切片尺寸 (width, height)
+            overlap_wh: 重叠尺寸 (width, height)
+
+        Returns:
+            包含检测结果和统计信息的字典
+        """
+        try:
+            # 使用配置或默认值
+            slice_wh = slice_wh or self.small_object_config['slice_wh']
+            overlap_wh = overlap_wh or self.small_object_config['overlap_wh']
+
+            # 定义回调函数
+            def callback(image_slice: np.ndarray) -> sv.Detections:
+                results = model.predict(image_slice, conf=conf, iou=iou, verbose=False)
+                return sv.Detections.from_ultralytics(results[0])
+
+            # 创建 InferenceSlicer
+            slicer = sv.InferenceSlicer(
+                callback=callback,
+                slice_wh=slice_wh,
+                overlap_wh=overlap_wh,
+                iou_threshold=self.small_object_config['iou_threshold'],
+                overlap_filter=self.small_object_config['overlap_filter'],
+                thread_workers=self.small_object_config['thread_workers']
+            )
+
+            # 记录开始时间
+            start_time = time.time()
+
+            # 执行切片检测
+            detections = slicer(image)
+
+            # 记录处理时间
+            processing_time = time.time() - start_time
+
+            # 生成标签
+            labels = self._generate_labels(detections)
+
+            # 创建增强可视化
+            annotated_image = self._create_enhanced_visualization(
+                image.copy(), detections, labels
+            )
+
+            # 计算统计信息
+            statistics = self._calculate_statistics(detections)
+            statistics['processing_time'] = processing_time
+            statistics['slice_config'] = {
+                'slice_wh': slice_wh,
+                'overlap_wh': overlap_wh,
+                'total_slices': self._estimate_slice_count(image.shape[:2], slice_wh, overlap_wh)
+            }
+
+            # 生成性能指标
+            metrics = self._calculate_metrics(detections)
+            metrics['processing_time'] = processing_time
+
+            logging.info(f"小目标检测完成: {len(detections.xyxy)} 个目标, 耗时 {processing_time:.2f}s")
+
+            return {
+                'annotated_image': annotated_image,
+                'detections': detections,
+                'labels': labels,
+                'statistics': statistics,
+                'metrics': metrics,
+                'detection_count': len(detections.xyxy),
+                'method': 'InferenceSlicer'
+            }
+
+        except Exception as e:
+            logging.error(f"小目标检测失败: {e}")
+            return {
+                'annotated_image': image,
+                'detections': None,
+                'labels': [],
+                'statistics': {},
+                'metrics': {},
+                'detection_count': 0,
+                'method': 'InferenceSlicer',
+                'error': str(e)
+            }
+
+    def _estimate_slice_count(self, image_shape: Tuple[int, int],
+                            slice_wh: Tuple[int, int],
+                            overlap_wh: Tuple[int, int]) -> int:
+        """估算切片数量"""
+        height, width = image_shape
+        slice_w, slice_h = slice_wh
+        overlap_w, overlap_h = overlap_wh
+
+        # 计算步长
+        step_w = slice_w - overlap_w
+        step_h = slice_h - overlap_h
+
+        # 计算切片数量
+        cols = max(1, (width - overlap_w + step_w - 1) // step_w)
+        rows = max(1, (height - overlap_h + step_h - 1) // step_h)
+
+        return rows * cols
+
+    def create_comparison_view(self, original: np.ndarray,
                              annotated: np.ndarray) -> np.ndarray:
         """创建对比视图"""
         # 确保两个图像尺寸相同
@@ -248,6 +370,192 @@ class SupervisionWrapper:
             summary_lines.append(f"置信度范围: {conf_stats.get('min', 0):.3f} - {conf_stats.get('max', 0):.3f}")
         
         return "\n".join(summary_lines)
+
+    def configure_small_object_detection(self,
+                                       slice_wh: Tuple[int, int] = (640, 640),
+                                       overlap_wh: Tuple[int, int] = (128, 128),
+                                       iou_threshold: float = 0.5,
+                                       thread_workers: int = 1):
+        """
+        配置小目标检测参数
+
+        Args:
+            slice_wh: 切片尺寸 (width, height)
+            overlap_wh: 重叠尺寸 (width, height)
+            iou_threshold: NMS IoU 阈值
+            thread_workers: 线程数
+        """
+        self.small_object_config.update({
+            'slice_wh': slice_wh,
+            'overlap_wh': overlap_wh,
+            'iou_threshold': iou_threshold,
+            'thread_workers': thread_workers
+        })
+        logging.info(f"小目标检测配置已更新: {self.small_object_config}")
+
+    def get_optimal_slice_config(self, image_shape: Tuple[int, int]) -> Dict[str, Tuple[int, int]]:
+        """
+        根据图像尺寸推荐最优切片配置
+
+        Args:
+            image_shape: 图像尺寸 (height, width)
+
+        Returns:
+            推荐的切片配置
+        """
+        height, width = image_shape
+
+        # 根据图像尺寸选择合适的切片大小
+        if width <= 1920 and height <= 1080:  # 1080p 及以下
+            slice_wh = (640, 640)
+            overlap_wh = (64, 64)
+        elif width <= 3840 and height <= 2160:  # 4K
+            slice_wh = (800, 800)
+            overlap_wh = (128, 128)
+        else:  # 更高分辨率
+            slice_wh = (1024, 1024)
+            overlap_wh = (256, 256)
+
+        return {
+            'slice_wh': slice_wh,
+            'overlap_wh': overlap_wh,
+            'estimated_slices': self._estimate_slice_count(image_shape, slice_wh, overlap_wh)
+        }
+
+    def detect_with_multiple_scales(self, image: np.ndarray, model,
+                                  conf: float = 0.25, iou: float = 0.45) -> Dict[str, Any]:
+        """
+        多尺度小目标检测
+
+        Args:
+            image: 输入图像
+            model: YOLO 模型
+            conf: 置信度阈值
+            iou: IoU 阈值
+
+        Returns:
+            多尺度检测结果
+        """
+        try:
+            # 定义多个尺度配置
+            scale_configs = [
+                {'slice_wh': (320, 320), 'overlap_wh': (64, 64)},   # 小切片，适合极小目标
+                {'slice_wh': (640, 640), 'overlap_wh': (128, 128)}, # 中等切片
+                {'slice_wh': (960, 960), 'overlap_wh': (192, 192)}  # 大切片，适合中等目标
+            ]
+
+            all_detections = []
+            scale_results = {}
+
+            for i, config in enumerate(scale_configs):
+                logging.info(f"执行第 {i+1} 尺度检测: {config}")
+
+                result = self.detect_small_objects(
+                    image, model, conf, iou,
+                    slice_wh=config['slice_wh'],
+                    overlap_wh=config['overlap_wh']
+                )
+
+                if result['detections'] is not None:
+                    all_detections.append(result['detections'])
+                    scale_results[f'scale_{i+1}'] = {
+                        'config': config,
+                        'detection_count': result['detection_count'],
+                        'processing_time': result['statistics'].get('processing_time', 0)
+                    }
+
+            # 合并所有尺度的检测结果
+            if all_detections:
+                # 使用 Supervision 的合并功能
+                merged_detections = self._merge_multi_scale_detections(all_detections, iou)
+
+                # 生成最终可视化
+                labels = self._generate_labels(merged_detections)
+                annotated_image = self._create_enhanced_visualization(
+                    image.copy(), merged_detections, labels
+                )
+
+                # 计算统计信息
+                statistics = self._calculate_statistics(merged_detections)
+                statistics['scale_results'] = scale_results
+                statistics['total_scales'] = len(scale_configs)
+
+                return {
+                    'annotated_image': annotated_image,
+                    'detections': merged_detections,
+                    'labels': labels,
+                    'statistics': statistics,
+                    'detection_count': len(merged_detections.xyxy),
+                    'method': 'MultiScale'
+                }
+            else:
+                return {
+                    'annotated_image': image,
+                    'detections': None,
+                    'labels': [],
+                    'statistics': {'scale_results': scale_results},
+                    'detection_count': 0,
+                    'method': 'MultiScale'
+                }
+
+        except Exception as e:
+            logging.error(f"多尺度检测失败: {e}")
+            return {
+                'annotated_image': image,
+                'detections': None,
+                'labels': [],
+                'statistics': {},
+                'detection_count': 0,
+                'method': 'MultiScale',
+                'error': str(e)
+            }
+
+    def _merge_multi_scale_detections(self, detections_list: List[sv.Detections],
+                                    iou_threshold: float = 0.5) -> sv.Detections:
+        """合并多尺度检测结果"""
+        if not detections_list:
+            return sv.Detections.empty()
+
+        if len(detections_list) == 1:
+            return detections_list[0]
+
+        # 合并所有检测结果
+        all_xyxy = []
+        all_confidence = []
+        all_class_id = []
+        all_masks = []
+
+        for detections in detections_list:
+            if len(detections.xyxy) > 0:
+                all_xyxy.append(detections.xyxy)
+                if detections.confidence is not None:
+                    all_confidence.append(detections.confidence)
+                if detections.class_id is not None:
+                    all_class_id.append(detections.class_id)
+                if detections.mask is not None:
+                    all_masks.append(detections.mask)
+
+        if not all_xyxy:
+            return sv.Detections.empty()
+
+        # 拼接所有数据
+        merged_xyxy = np.vstack(all_xyxy)
+        merged_confidence = np.concatenate(all_confidence) if all_confidence else None
+        merged_class_id = np.concatenate(all_class_id) if all_class_id else None
+        merged_masks = np.vstack(all_masks) if all_masks else None
+
+        # 创建合并的检测结果
+        merged_detections = sv.Detections(
+            xyxy=merged_xyxy,
+            confidence=merged_confidence,
+            class_id=merged_class_id,
+            mask=merged_masks
+        )
+
+        # 应用 NMS 去除重复检测
+        merged_detections = merged_detections.with_nms(threshold=iou_threshold)
+
+        return merged_detections
 
 
 class SupervisionAnalyzer:

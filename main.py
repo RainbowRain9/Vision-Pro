@@ -188,6 +188,9 @@ class YOLODetectionUI(QMainWindow):
         # 参数设置组
         self.setup_param_group()
 
+        # 小目标检测设置组
+        self.setup_small_object_group()
+
         # 功能按钮组
         self.setup_function_group()
 
@@ -294,6 +297,60 @@ class YOLODetectionUI(QMainWindow):
 
         self.param_group.setLayout(self.param_layout)
         self.right_layout.addWidget(self.param_group)
+
+    def setup_small_object_group(self):
+        """设置小目标检测参数组"""
+        self.small_obj_group = QtWidgets.QGroupBox("小目标检测设置")
+        self.small_obj_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        self.small_obj_layout = QtWidgets.QVBoxLayout()
+        self.small_obj_layout.setSpacing(10)
+
+        # 启用小目标检测复选框
+        self.enable_small_obj_checkbox = QtWidgets.QCheckBox("启用小目标检测 (InferenceSlicer)")
+        self.enable_small_obj_checkbox.setToolTip("使用切片推理技术提高小目标检测精度")
+        self.small_obj_layout.addWidget(self.enable_small_obj_checkbox)
+
+        # 检测模式选择
+        mode_layout = QtWidgets.QHBoxLayout()
+        mode_layout.addWidget(QtWidgets.QLabel("检测模式:"))
+        self.detection_mode_combo = QtWidgets.QComboBox()
+        self.detection_mode_combo.addItems(["标准切片", "多尺度检测", "自适应切片"])
+        self.detection_mode_combo.setToolTip(
+            "标准切片: 固定尺寸切片\n"
+            "多尺度检测: 多个尺度组合检测\n"
+            "自适应切片: 根据图像尺寸自动调整"
+        )
+        mode_layout.addWidget(self.detection_mode_combo)
+        self.small_obj_layout.addLayout(mode_layout)
+
+        # 切片尺寸设置
+        slice_layout = QtWidgets.QHBoxLayout()
+        slice_layout.addWidget(QtWidgets.QLabel("切片尺寸:"))
+        self.slice_size_combo = QtWidgets.QComboBox()
+        self.slice_size_combo.addItems(["320x320", "640x640", "800x800", "1024x1024"])
+        self.slice_size_combo.setCurrentText("640x640")
+        self.slice_size_combo.setToolTip("切片尺寸越小，小目标检测效果越好，但处理时间更长")
+        slice_layout.addWidget(self.slice_size_combo)
+        self.small_obj_layout.addLayout(slice_layout)
+
+        # 重叠尺寸设置
+        overlap_layout = QtWidgets.QHBoxLayout()
+        overlap_layout.addWidget(QtWidgets.QLabel("重叠尺寸:"))
+        self.overlap_size_combo = QtWidgets.QComboBox()
+        self.overlap_size_combo.addItems(["64x64", "128x128", "192x192", "256x256"])
+        self.overlap_size_combo.setCurrentText("128x128")
+        self.overlap_size_combo.setToolTip("重叠区域有助于检测边界目标，但会增加计算量")
+        overlap_layout.addWidget(self.overlap_size_combo)
+        self.small_obj_layout.addLayout(overlap_layout)
+
+        # 性能提示标签
+        self.performance_hint_label = QtWidgets.QLabel("💡 提示: 启用小目标检测会增加处理时间")
+        self.performance_hint_label.setStyleSheet("color: #666; font-size: 10px;")
+        self.performance_hint_label.setWordWrap(True)
+        self.small_obj_layout.addWidget(self.performance_hint_label)
+
+        self.small_obj_group.setLayout(self.small_obj_layout)
+        self.right_layout.addWidget(self.small_obj_group)
 
     def setup_function_group(self):
         """设置功能按钮组"""
@@ -569,8 +626,15 @@ class YOLODetectionUI(QMainWindow):
             "图片文件 (*.jpg *.jpeg *.png *.bmp);;所有文件 (*)"
         )
         if file_path:
+            # 检查是否启用小目标检测
+            if (self.supervision_enabled and self.supervision_wrapper and
+                hasattr(self, 'enable_small_obj_checkbox') and
+                self.enable_small_obj_checkbox.isChecked()):
+                self.detect_image_with_small_objects(file_path)
+                return
+
             # 如果启用了 Supervision，使用增强检测
-            if self.supervision_enabled and self.supervision_wrapper:
+            elif self.supervision_enabled and self.supervision_wrapper:
                 self.detect_image_with_supervision(file_path)
                 return
 
@@ -896,6 +960,149 @@ class YOLODetectionUI(QMainWindow):
 
         # 记录详细统计到日志
         self.logger.info(f"检测统计信息:\n{summary}")
+
+    def detect_image_with_small_objects(self, file_path: str):
+        """使用小目标检测功能的图像检测"""
+        try:
+            # 读取图片
+            img = cv2.imread(file_path)
+            if img is None:
+                raise Exception("无法读取图像文件")
+
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            # 显示原始图片
+            self.display_image(img, self.original_img_label)
+            self.current_image = img.copy()
+
+            # 获取检测参数
+            conf = self.conf_slider.value() / 100
+            iou = self.iou_slider.value() / 100
+
+            # 获取小目标检测配置
+            detection_mode = self.detection_mode_combo.currentText()
+            slice_size_text = self.slice_size_combo.currentText()
+            overlap_size_text = self.overlap_size_combo.currentText()
+
+            # 解析尺寸
+            slice_w, slice_h = map(int, slice_size_text.split('x'))
+            overlap_w, overlap_h = map(int, overlap_size_text.split('x'))
+
+            self.statusbar.showMessage(f"正在使用{detection_mode}进行小目标检测...")
+            QtWidgets.QApplication.processEvents()
+
+            # 根据检测模式选择方法
+            if detection_mode == "多尺度检测":
+                result = self.supervision_wrapper.detect_with_multiple_scales(
+                    img, self.model, conf, iou
+                )
+            elif detection_mode == "自适应切片":
+                # 获取最优配置
+                optimal_config = self.supervision_wrapper.get_optimal_slice_config(img.shape[:2])
+                result = self.supervision_wrapper.detect_small_objects(
+                    img, self.model, conf, iou,
+                    slice_wh=optimal_config['slice_wh'],
+                    overlap_wh=optimal_config['overlap_wh']
+                )
+            else:  # 标准切片
+                result = self.supervision_wrapper.detect_small_objects(
+                    img, self.model, conf, iou,
+                    slice_wh=(slice_w, slice_h),
+                    overlap_wh=(overlap_w, overlap_h)
+                )
+
+            # 显示检测结果
+            if 'error' not in result:
+                enhanced_image = result['annotated_image']
+                self.display_image(enhanced_image, self.result_img_label)
+                self.current_result = enhanced_image.copy()
+
+                # 更新结果表格（如果有原始检测结果）
+                if result['detections'] is not None:
+                    # 创建一个模拟的 ultralytics 结果对象用于表格显示
+                    self.update_small_object_result_table(result)
+
+                # 显示统计信息
+                self.show_small_object_statistics(result['statistics'])
+
+                self.save_btn.setEnabled(True)
+                detection_count = result['detection_count']
+                method = result.get('method', '小目标检测')
+                processing_time = result['statistics'].get('processing_time', 0)
+
+                self.statusbar.showMessage(
+                    f"{method}完成: {os.path.basename(file_path)} "
+                    f"(检测到 {detection_count} 个目标, 耗时 {processing_time:.2f}s)", 5000
+                )
+            else:
+                raise Exception(result['error'])
+
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"小目标检测失败: {str(e)}")
+            self.statusbar.showMessage("小目标检测失败", 3000)
+            self.logger.error(f"小目标检测错误: {e}")
+
+    def update_small_object_result_table(self, result: Dict):
+        """更新小目标检测结果表格"""
+        self.result_table.setRowCount(0)
+
+        detections = result['detections']
+        if detections is None or len(detections.xyxy) == 0:
+            return
+
+        labels = result['labels']
+
+        for i in range(len(detections.xyxy)):
+            # 获取检测信息
+            bbox = detections.xyxy[i]
+            x1, y1, x2, y2 = map(int, bbox)
+
+            confidence = detections.confidence[i] if detections.confidence is not None else 0.0
+            class_id = int(detections.class_id[i]) if detections.class_id is not None else 0
+
+            # 获取类别名称
+            if i < len(labels):
+                # 从标签中提取类别名称（格式: "class_name: confidence"）
+                class_name = labels[i].split(':')[0].strip()
+            elif class_id < len(self.supervision_wrapper.class_names):
+                class_name = self.supervision_wrapper.class_names[class_id]
+            else:
+                class_name = f"Class_{class_id}"
+
+            # 添加新行
+            row_position = self.result_table.rowCount()
+            self.result_table.insertRow(row_position)
+
+            # 设置单元格内容
+            self.result_table.setItem(row_position, 0, QTableWidgetItem(class_name))
+            self.result_table.setItem(row_position, 1, QTableWidgetItem(f"{confidence:.2f}"))
+            self.result_table.setItem(row_position, 2, QTableWidgetItem(f"({x1}, {y1})"))
+            self.result_table.setItem(row_position, 3, QTableWidgetItem(f"({x2}, {y2})"))
+
+    def show_small_object_statistics(self, statistics: Dict):
+        """显示小目标检测统计信息"""
+        if not statistics:
+            return
+
+        # 更新性能提示标签
+        if hasattr(self, 'performance_hint_label'):
+            processing_time = statistics.get('processing_time', 0)
+            detection_count = statistics.get('total_detections', 0)
+
+            if 'slice_config' in statistics:
+                slice_info = statistics['slice_config']
+                total_slices = slice_info.get('total_slices', 0)
+                hint_text = (f"✅ 检测完成: {detection_count} 个目标, "
+                           f"处理 {total_slices} 个切片, 耗时 {processing_time:.2f}s")
+            else:
+                hint_text = f"✅ 检测完成: {detection_count} 个目标, 耗时 {processing_time:.2f}s"
+
+            self.performance_hint_label.setText(hint_text)
+            self.performance_hint_label.setStyleSheet("color: #4CAF50; font-size: 10px;")
+
+        # 记录详细统计到日志
+        summary = self.supervision_wrapper.generate_detection_summary(statistics)
+        self.logger.info(f"小目标检测统计信息:\n{summary}")
 
     def closeEvent(self, event):
         """窗口关闭事件"""

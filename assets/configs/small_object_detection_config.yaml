@@ -1,0 +1,188 @@
+# 小目标检测配置文件
+# Small Object Detection Configuration
+
+# 基础配置
+basic:
+  # 默认置信度阈值
+  confidence_threshold: 0.25
+  # 默认 IoU 阈值
+  iou_threshold: 0.45
+  # 是否启用小目标检测
+  enable_small_object_detection: false
+
+# InferenceSlicer 配置
+inference_slicer:
+  # 默认切片尺寸 (width, height)
+  default_slice_wh: [640, 640]
+  # 默认重叠尺寸 (width, height)
+  default_overlap_wh: [128, 128]
+  # NMS IoU 阈值
+  nms_iou_threshold: 0.5
+  # 重叠过滤策略
+  overlap_filter: "NON_MAX_SUPPRESSION"  # NON_MAX_SUPPRESSION, NON_MAX_MERGE
+  # 线程数
+  thread_workers: 1
+
+# 预设配置
+presets:
+  # 极小目标检测 (适用于无人机图像中的行人、车辆等)
+  ultra_small:
+    slice_wh: [320, 320]
+    overlap_wh: [64, 64]
+    confidence_threshold: 0.15
+    description: "适用于检测极小目标，如无人机图像中的行人"
+    
+  # 小目标检测 (标准配置)
+  small:
+    slice_wh: [640, 640]
+    overlap_wh: [128, 128]
+    confidence_threshold: 0.25
+    description: "标准小目标检测配置"
+    
+  # 中等目标检测
+  medium:
+    slice_wh: [800, 800]
+    overlap_wh: [160, 160]
+    confidence_threshold: 0.3
+    description: "适用于中等尺寸目标检测"
+    
+  # 大目标检测
+  large:
+    slice_wh: [1024, 1024]
+    overlap_wh: [256, 256]
+    confidence_threshold: 0.35
+    description: "适用于大尺寸目标检测"
+
+# 自适应配置规则
+adaptive_rules:
+  # 根据图像分辨率自动选择配置
+  resolution_based:
+    # 1080p 及以下
+    low_res:
+      max_width: 1920
+      max_height: 1080
+      recommended_slice_wh: [640, 640]
+      recommended_overlap_wh: [64, 64]
+      
+    # 4K 分辨率
+    medium_res:
+      max_width: 3840
+      max_height: 2160
+      recommended_slice_wh: [800, 800]
+      recommended_overlap_wh: [128, 128]
+      
+    # 8K 及以上
+    high_res:
+      max_width: 7680
+      max_height: 4320
+      recommended_slice_wh: [1024, 1024]
+      recommended_overlap_wh: [256, 256]
+
+# 多尺度检测配置
+multi_scale:
+  # 是否启用多尺度检测
+  enabled: false
+  # 尺度配置列表
+  scales:
+    - name: "small_scale"
+      slice_wh: [320, 320]
+      overlap_wh: [64, 64]
+      weight: 1.0
+      description: "小尺度，适合极小目标"
+      
+    - name: "medium_scale"
+      slice_wh: [640, 640]
+      overlap_wh: [128, 128]
+      weight: 1.2
+      description: "中等尺度，标准配置"
+      
+    - name: "large_scale"
+      slice_wh: [960, 960]
+      overlap_wh: [192, 192]
+      weight: 0.8
+      description: "大尺度，适合中等目标"
+
+# 性能优化配置
+performance:
+  # 最大并行线程数
+  max_threads: 4
+  # 内存使用限制 (MB)
+  memory_limit: 2048
+  # 是否启用 GPU 加速
+  use_gpu: true
+  # 批处理大小
+  batch_size: 1
+
+# 输出配置
+output:
+  # 是否保存切片可视化
+  save_slice_visualization: false
+  # 是否保存统计信息
+  save_statistics: true
+  # 输出格式
+  image_format: "jpg"
+  # 图像质量 (1-100)
+  image_quality: 95
+
+# VisDrone 数据集特定配置
+visdrone:
+  # VisDrone 类别名称
+  class_names:
+    - "pedestrian"      # 行人
+    - "people"          # 人群
+    - "bicycle"         # 自行车
+    - "car"             # 汽车
+    - "van"             # 面包车
+    - "truck"           # 卡车
+    - "tricycle"        # 三轮车
+    - "awning-tricycle" # 遮阳三轮车
+    - "bus"             # 公交车
+    - "motor"           # 摩托车
+  
+  # 针对 VisDrone 的优化配置
+  optimized_config:
+    slice_wh: [640, 640]
+    overlap_wh: [128, 128]
+    confidence_threshold: 0.2
+    iou_threshold: 0.5
+    description: "针对 VisDrone 数据集优化的配置"
+
+# 实验配置
+experimental:
+  # 是否启用实验性功能
+  enabled: false
+  
+  # 动态切片大小调整
+  dynamic_slicing:
+    enabled: false
+    min_slice_size: [320, 320]
+    max_slice_size: [1024, 1024]
+    adjustment_factor: 1.2
+    
+  # 智能重叠调整
+  smart_overlap:
+    enabled: false
+    min_overlap_ratio: 0.1
+    max_overlap_ratio: 0.3
+    
+  # 置信度自适应调整
+  adaptive_confidence:
+    enabled: false
+    min_confidence: 0.1
+    max_confidence: 0.5
+
+# 调试配置
+debug:
+  # 是否启用调试模式
+  enabled: false
+  # 是否显示切片边界
+  show_slice_boundaries: false
+  # 是否保存中间结果
+  save_intermediate_results: false
+  # 详细日志级别
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# 版本信息
+version: "1.0.0"
+last_updated: "2024-12-19"
+description: "YOLOvision Pro 小目标检测配置文件"
