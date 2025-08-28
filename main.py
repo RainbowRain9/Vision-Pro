@@ -128,13 +128,40 @@ class YOLODetectionUI(QMainWindow):
         # 主布局
         self.main_layout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(15)
+        self.main_layout.setSpacing(0)
 
-        # 创建左侧布局 (图像显示)
-        self.setup_left_panel()
+        # 创建可调整大小的分割器
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self.splitter.setHandleWidth(8)
+        self.splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #e0e0e0;
+                border: 1px solid #c0c0c0;
+                border-radius: 3px;
+            }
+            QSplitter::handle:hover {
+                background-color: #d0d0d0;
+            }
+        """)
 
-        # 创建右侧布局 (控制面板)
-        self.setup_right_panel()
+        # 创建左侧面板 (图像显示)
+        self.left_widget = self.setup_left_panel()
+        self.splitter.addWidget(self.left_widget)
+
+        # 创建右侧面板 (控制面板) - 带滚动功能
+        self.right_widget = self.setup_right_panel()
+        self.splitter.addWidget(self.right_widget)
+
+        # 设置初始分割比例 (左侧70%, 右侧30%)
+        self.splitter.setSizes([700, 300])
+        self.splitter.setStretchFactor(0, 1)  # 左侧可拉伸
+        self.splitter.setStretchFactor(1, 0)  # 右侧固定最小宽度
+
+        # 将分割器添加到主布局
+        self.main_layout.addWidget(self.splitter)
+
+        # 设置菜单栏
+        self.setup_menubar()
 
         # 设置状态栏
         self.statusbar = QtWidgets.QStatusBar(self)
@@ -144,10 +171,79 @@ class YOLODetectionUI(QMainWindow):
         # 设置全局样式
         self.set_style()
 
+    def setup_menubar(self):
+        """设置菜单栏"""
+        menubar = self.menuBar()
+
+        # 视图菜单
+        view_menu = menubar.addMenu('视图(&V)')
+
+        # 重置布局动作
+        reset_layout_action = QtWidgets.QAction('重置布局', self)
+        reset_layout_action.setShortcut('Ctrl+R')
+        reset_layout_action.setStatusTip('重置界面布局到默认状态')
+        reset_layout_action.triggered.connect(self.reset_layout)
+        view_menu.addAction(reset_layout_action)
+
+        view_menu.addSeparator()
+
+        # 布局预设
+        layout_submenu = view_menu.addMenu('布局预设')
+
+        # 图像优先布局
+        image_priority_action = QtWidgets.QAction('图像优先 (80:20)', self)
+        image_priority_action.triggered.connect(lambda: self.set_layout_ratio(80, 20))
+        layout_submenu.addAction(image_priority_action)
+
+        # 平衡布局
+        balanced_action = QtWidgets.QAction('平衡布局 (70:30)', self)
+        balanced_action.triggered.connect(lambda: self.set_layout_ratio(70, 30))
+        layout_submenu.addAction(balanced_action)
+
+        # 控制优先布局
+        control_priority_action = QtWidgets.QAction('控制优先 (60:40)', self)
+        control_priority_action.triggered.connect(lambda: self.set_layout_ratio(60, 40))
+        layout_submenu.addAction(control_priority_action)
+
+        view_menu.addSeparator()
+
+        # 全屏切换
+        fullscreen_action = QtWidgets.QAction('全屏', self)
+        fullscreen_action.setShortcut('F11')
+        fullscreen_action.setCheckable(True)
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        view_menu.addAction(fullscreen_action)
+
+    def reset_layout(self):
+        """重置布局到默认状态"""
+        self.splitter.setSizes([700, 300])
+        self.statusbar.showMessage("布局已重置", 2000)
+
+    def set_layout_ratio(self, left_percent, right_percent):
+        """设置布局比例"""
+        total_width = self.splitter.width()
+        left_width = int(total_width * left_percent / 100)
+        right_width = int(total_width * right_percent / 100)
+        self.splitter.setSizes([left_width, right_width])
+        self.statusbar.showMessage(f"布局已调整为 {left_percent}:{right_percent}", 2000)
+
+    def toggle_fullscreen(self):
+        """切换全屏模式"""
+        if self.isFullScreen():
+            self.showNormal()
+            self.statusbar.showMessage("退出全屏模式", 2000)
+        else:
+            self.showFullScreen()
+            self.statusbar.showMessage("进入全屏模式", 2000)
+
     def setup_left_panel(self):
         """设置左侧面板 - 图像显示区域"""
-        self.left_layout = QtWidgets.QVBoxLayout()
+        left_widget = QtWidgets.QWidget()
+        left_widget.setMinimumWidth(400)  # 设置最小宽度
+
+        self.left_layout = QtWidgets.QVBoxLayout(left_widget)
         self.left_layout.setSpacing(15)
+        self.left_layout.setContentsMargins(10, 10, 10, 10)
 
         # 原始图像组
         self.original_group = QtWidgets.QGroupBox("原始图像")
@@ -175,12 +271,50 @@ class YOLODetectionUI(QMainWindow):
         self.result_group.setLayout(result_layout)
         self.left_layout.addWidget(self.result_group)
 
-        self.main_layout.addLayout(self.left_layout, stretch=3)
+        return left_widget
 
     def setup_right_panel(self):
-        """设置右侧面板 - 控制区域"""
-        self.right_layout = QtWidgets.QVBoxLayout()
+        """设置右侧面板 - 控制区域（带滚动功能）"""
+        # 创建滚动区域
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll_area.setMinimumWidth(350)  # 设置最小宽度
+        scroll_area.setMaximumWidth(500)  # 设置最大宽度
+
+        # 创建滚动内容widget
+        scroll_content = QtWidgets.QWidget()
+        scroll_content.setObjectName("scroll_content")
+
+        # 设置滚动区域样式
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollArea > QWidget > QWidget {
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                background-color: #f0f0f0;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #c0c0c0;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #a0a0a0;
+            }
+        """)
+
+        # 创建右侧控制面板布局
+        self.right_layout = QtWidgets.QVBoxLayout(scroll_content)
         self.right_layout.setSpacing(15)
+        self.right_layout.setContentsMargins(10, 10, 10, 10)
 
         # 模型选择组
         self.setup_model_group()
@@ -197,7 +331,13 @@ class YOLODetectionUI(QMainWindow):
         # 检测结果表格组
         self.setup_result_table_group()
 
-        self.main_layout.addLayout(self.right_layout, stretch=1)
+        # 添加弹性空间，确保内容顶部对齐
+        self.right_layout.addStretch()
+
+        # 将内容widget设置到滚动区域
+        scroll_area.setWidget(scroll_content)
+
+        return scroll_area
 
     def setup_model_group(self):
         """设置模型选择组"""
