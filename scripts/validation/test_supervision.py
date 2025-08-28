@@ -20,17 +20,26 @@ def test_supervision_installation():
         # 测试核心组件
         components = [
             'BoxAnnotator',
-            'LabelAnnotator', 
+            'LabelAnnotator',
             'HeatMapAnnotator',
-            'DetectionMetrics',
             'Detections'
         ]
+
+        # DetectionMetrics 在新版本中可能不可用，单独测试
+        optional_components = ['DetectionMetrics']
         
         for component in components:
             if hasattr(sv, component):
                 print(f"✓ {component}: 可用")
             else:
                 print(f"✗ {component}: 不可用")
+
+        # 测试可选组件
+        for component in optional_components:
+            if hasattr(sv, component):
+                print(f"✓ {component}: 可用 (可选)")
+            else:
+                print(f"ℹ {component}: 不可用 (可选，不影响功能)")
         
         return True
         
@@ -112,11 +121,14 @@ def test_basic_functionality():
         annotated = label_annotator.annotate(scene=annotated, detections=test_detections)
         
         print("✓ 基本标注功能正常")
-        
-        # 测试指标计算
-        metrics = sv.DetectionMetrics()
-        print("✓ 检测指标模块可用")
-        
+
+        # 测试指标计算 (可选功能)
+        try:
+            metrics = sv.DetectionMetrics()
+            print("✓ 检测指标模块可用")
+        except AttributeError:
+            print("ℹ 检测指标模块不可用 (不影响核心功能)")
+
         return True
         
     except Exception as e:

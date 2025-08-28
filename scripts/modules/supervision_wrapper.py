@@ -25,23 +25,31 @@ class SupervisionWrapper:
         """
         self.class_names = class_names or []
         
-        # 初始化标注器
-        self.box_annotator = sv.BoxAnnotator(
-            thickness=2,
-            text_thickness=1,
-            text_scale=0.5
-        )
+        # 初始化标注器 (适配 Supervision 0.26.1+ API)
+        try:
+            # 尝试新版本 API
+            self.box_annotator = sv.BoxAnnotator(thickness=2)
+            self.label_annotator = sv.LabelAnnotator(
+                text_thickness=1,
+                text_scale=0.5,
+                text_padding=5
+            )
+        except TypeError:
+            # 回退到更简单的初始化
+            self.box_annotator = sv.BoxAnnotator()
+            self.label_annotator = sv.LabelAnnotator()
         
-        self.label_annotator = sv.LabelAnnotator(
-            text_thickness=1,
-            text_scale=0.5,
-            text_padding=5
-        )
-        
-        # 初始化颜色调色板
-        self.color_palette = sv.ColorPalette.default()
-        
-        # 性能指标
+        # 初始化颜色调色板 (适配新版本 API)
+        try:
+            self.color_palette = sv.ColorPalette.default()
+        except AttributeError:
+            # 新版本可能使用不同的 API
+            try:
+                self.color_palette = sv.ColorPalette()
+            except:
+                self.color_palette = None
+
+        # 性能指标 (使用自定义实现，因为 DetectionMetrics 在新版本中不可用)
         self.detection_metrics = {}
         
         logging.info("Supervision 包装器初始化完成")

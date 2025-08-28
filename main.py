@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 """
 YOLOvision Pro - 目标检测系统主程序
@@ -13,6 +13,16 @@ import logging
 import yaml
 from pathlib import Path
 from typing import Dict, Any
+
+# 添加本地 ultralytics 到 Python 路径
+current_dir = Path(__file__).parent
+ultralytics_path = current_dir / "ultralytics"
+if ultralytics_path.exists():
+    ultralytics_str = str(ultralytics_path.absolute())
+    if ultralytics_str not in sys.path:
+        sys.path.insert(0, ultralytics_str)
+        print(f"✅ 添加 ultralytics 路径: {ultralytics_str}")
+
 from ultralytics import YOLO
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt, QTimer

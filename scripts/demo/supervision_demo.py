@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+python main.py#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 YOLOvision Pro - Supervision 集成演示脚本
