@@ -23,7 +23,8 @@
       "mcp__cloudbase__collectionQuery",
       "Bash(set:*)",
       "Bash(powershell:*)",
-      "Bash(md:*)"
+      "Bash(md:*)",
+      "Bash(git remote set-url:*)"
     ],
     "deny": [],
     "additionalDirectories": [
