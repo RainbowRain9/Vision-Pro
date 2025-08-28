@@ -325,6 +325,9 @@ class YOLODetectionUI(QMainWindow):
         # 小目标检测设置组
         self.setup_small_object_group()
 
+        # 标注器设置组
+        self.setup_annotator_group()
+
         # 功能按钮组
         self.setup_function_group()
 
@@ -492,6 +495,83 @@ class YOLODetectionUI(QMainWindow):
         self.small_obj_group.setLayout(self.small_obj_layout)
         self.right_layout.addWidget(self.small_obj_group)
 
+    def setup_annotator_group(self):
+        """设置标注器控制组"""
+        self.annotator_group = QtWidgets.QGroupBox("标注器设置")
+        self.annotator_group.setStyleSheet("QGroupBox { font-weight: bold; }")
+        self.annotator_layout = QtWidgets.QVBoxLayout()
+        self.annotator_layout.setSpacing(8)
+
+        # 预设选择
+        preset_layout = QtWidgets.QHBoxLayout()
+        preset_layout.addWidget(QtWidgets.QLabel("预设:"))
+        self.annotator_preset_combo = QtWidgets.QComboBox()
+        self.annotator_preset_combo.addItems([
+            "basic", "detailed", "privacy", "analysis", "segmentation", "presentation"
+        ])
+        self.annotator_preset_combo.setToolTip("选择标注器预设配置")
+        preset_layout.addWidget(self.annotator_preset_combo)
+        self.annotator_layout.addLayout(preset_layout)
+
+        # 单个标注器开关
+        annotators_layout = QtWidgets.QGridLayout()
+
+        # 创建标注器复选框
+        self.annotator_checkboxes = {}
+        annotator_configs = [
+            ("box", "边界框", "显示目标边界框"),
+            ("label", "标签", "显示类别和置信度"),
+            ("mask", "掩码", "显示分割掩码"),
+            ("polygon", "多边形", "显示多边形轮廓"),
+            ("heatmap", "热力图", "显示目标密度热力图"),
+            ("blur", "模糊", "模糊检测区域"),
+            ("pixelate", "像素化", "像素化检测区域")
+        ]
+
+        for i, (key, name, tooltip) in enumerate(annotator_configs):
+            checkbox = QtWidgets.QCheckBox(name)
+            checkbox.setToolTip(tooltip)
+            checkbox.setObjectName(f"annotator_{key}")
+            self.annotator_checkboxes[key] = checkbox
+
+            # 默认启用基础标注器
+            if key in ["box", "label"]:
+                checkbox.setChecked(True)
+
+            # 布局：2列
+            row = i // 2
+            col = i % 2
+            annotators_layout.addWidget(checkbox, row, col)
+
+        self.annotator_layout.addLayout(annotators_layout)
+
+        # 控制按钮
+        button_layout = QtWidgets.QHBoxLayout()
+
+        self.apply_preset_btn = QtWidgets.QPushButton("应用预设")
+        self.apply_preset_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; background-color: #2196F3; color: white; border-radius: 3px; }"
+            "QPushButton:hover { background-color: #1976D2; }"
+        )
+
+        self.clear_heatmap_btn = QtWidgets.QPushButton("清除热力图")
+        self.clear_heatmap_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; background-color: #FF9800; color: white; border-radius: 3px; }"
+            "QPushButton:hover { background-color: #F57C00; }"
+        )
+
+        button_layout.addWidget(self.apply_preset_btn)
+        button_layout.addWidget(self.clear_heatmap_btn)
+        self.annotator_layout.addLayout(button_layout)
+
+        # 状态显示
+        self.annotator_status_label = QtWidgets.QLabel("状态: 基础模式")
+        self.annotator_status_label.setStyleSheet("color: #666; font-size: 10px;")
+        self.annotator_layout.addWidget(self.annotator_status_label)
+
+        self.annotator_group.setLayout(self.annotator_layout)
+        self.right_layout.addWidget(self.annotator_group)
+
     def setup_function_group(self):
         """设置功能按钮组"""
         self.func_group = QtWidgets.QGroupBox("检测功能")
@@ -642,6 +722,14 @@ class YOLODetectionUI(QMainWindow):
         self.conf_slider.valueChanged.connect(self.update_conf_value)
         self.iou_slider.valueChanged.connect(self.update_iou_value)
         self.timer.timeout.connect(self.update_camera_frame)
+
+        # 标注器控制信号
+        self.apply_preset_btn.clicked.connect(self.apply_annotator_preset)
+        self.clear_heatmap_btn.clicked.connect(self.clear_heatmap_history)
+
+        # 标注器复选框信号
+        for key, checkbox in self.annotator_checkboxes.items():
+            checkbox.stateChanged.connect(lambda state, annotator=key: self.toggle_annotator(annotator, state))
 
     def get_model_files(self):
         """获取models目录下的模型文件"""
@@ -1030,6 +1118,71 @@ class YOLODetectionUI(QMainWindow):
         except Exception as e:
             self.supervision_enabled = False
             self.logger.error(f"Supervision 初始化失败: {e}")
+
+    def apply_annotator_preset(self):
+        """应用标注器预设"""
+        if not self.supervision_enabled or not self.supervision_wrapper:
+            QMessageBox.warning(self, "警告", "Supervision 功能未启用")
+            return
+
+        preset_name = self.annotator_preset_combo.currentText()
+        try:
+            self.supervision_wrapper.set_annotator_preset(preset_name)
+
+            # 更新复选框状态
+            enabled_annotators = self.supervision_wrapper.get_enabled_annotators()
+            for key, checkbox in self.annotator_checkboxes.items():
+                checkbox.blockSignals(True)  # 阻止信号避免递归
+                checkbox.setChecked(key in enabled_annotators)
+                checkbox.blockSignals(False)
+
+            # 更新状态显示
+            self.annotator_status_label.setText(f"状态: {preset_name} 模式")
+            self.statusbar.showMessage(f"已应用预设: {preset_name}", 2000)
+            self.logger.info(f"应用标注器预设: {preset_name}")
+
+        except Exception as e:
+            error_msg = f"应用预设失败: {str(e)}"
+            QMessageBox.critical(self, "错误", error_msg)
+            self.logger.error(error_msg)
+
+    def toggle_annotator(self, annotator_type: str, state: int):
+        """切换标注器状态"""
+        if not self.supervision_enabled or not self.supervision_wrapper:
+            return
+
+        try:
+            if state == 2:  # Qt.Checked
+                self.supervision_wrapper.enable_annotator(annotator_type)
+                action = "启用"
+            else:  # Qt.Unchecked
+                self.supervision_wrapper.disable_annotator(annotator_type)
+                action = "禁用"
+
+            # 更新状态显示
+            enabled_count = len(self.supervision_wrapper.get_enabled_annotators())
+            self.annotator_status_label.setText(f"状态: 自定义模式 ({enabled_count} 个标注器)")
+
+            self.logger.info(f"{action}标注器: {annotator_type}")
+
+        except Exception as e:
+            self.logger.error(f"切换标注器 {annotator_type} 失败: {e}")
+
+    def clear_heatmap_history(self):
+        """清除热力图历史数据"""
+        if not self.supervision_enabled or not self.supervision_wrapper:
+            QMessageBox.warning(self, "警告", "Supervision 功能未启用")
+            return
+
+        try:
+            self.supervision_wrapper.clear_heatmap_history()
+            self.statusbar.showMessage("热力图历史数据已清除", 2000)
+            self.logger.info("清除热力图历史数据")
+
+        except Exception as e:
+            error_msg = f"清除热力图历史失败: {str(e)}"
+            QMessageBox.critical(self, "错误", error_msg)
+            self.logger.error(error_msg)
 
     def detect_image_with_supervision(self, file_path: str):
         """使用 Supervision 增强的图像检测"""

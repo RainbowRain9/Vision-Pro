@@ -1,0 +1,312 @@
+# Supervision 标注器配置文件
+# Supervision Annotators Configuration File
+# 为 YOLOvision Pro 提供统一的标注器配置管理
+
+# 版本信息
+version: "1.0.0"
+last_updated: "2024-12-19"
+description: "YOLOvision Pro Supervision 标注器配置文件"
+
+# 标注器配置
+annotators:
+  # 边界框标注器
+  box:
+    enabled: true
+    thickness: 2
+    color: null  # null 表示使用默认颜色调色板
+    description: "绘制目标边界框"
+    
+  # 标签标注器
+  label:
+    enabled: true
+    text_scale: 0.5
+    text_thickness: 1
+    text_padding: 5
+    text_color: null  # null 表示使用默认颜色
+    background_color: null
+    description: "显示类别标签和置信度"
+    
+  # 分割掩码标注器
+  mask:
+    enabled: false
+    opacity: 0.5
+    color: null
+    description: "渲染分割掩码（需要分割模型支持）"
+    requirements: ["segmentation_model"]
+    
+  # 多边形标注器
+  polygon:
+    enabled: false
+    thickness: 2
+    color: null
+    description: "绘制多边形轮廓"
+    
+  # 热力图标注器
+  heatmap:
+    enabled: false
+    opacity: 0.7
+    radius: 40
+    kernel_size: 41
+    description: "生成目标密度热力图"
+    requirements: ["multiple_frames"]
+    
+  # 模糊标注器
+  blur:
+    enabled: false
+    kernel_size: 15
+    description: "对检测区域应用模糊效果"
+    use_cases: ["privacy_protection", "sensitive_content"]
+    
+  # 像素化标注器
+  pixelate:
+    enabled: false
+    pixel_size: 20
+    description: "对检测区域应用像素化效果"
+    use_cases: ["privacy_protection", "artistic_effect"]
+
+# 预设配置
+presets:
+  # 基础模式
+  basic:
+    name: "基础模式"
+    description: "基本的边界框和标签显示"
+    annotators: ["box", "label"]
+    config_overrides:
+      box:
+        thickness: 2
+      label:
+        text_scale: 0.5
+        
+  # 详细模式
+  detailed:
+    name: "详细模式"
+    description: "详细的检测信息显示"
+    annotators: ["box", "label", "polygon"]
+    config_overrides:
+      box:
+        thickness: 3
+      label:
+        text_scale: 0.6
+        text_thickness: 2
+      polygon:
+        thickness: 2
+        
+  # 隐私保护模式
+  privacy:
+    name: "隐私保护模式"
+    description: "模糊敏感区域，保护隐私"
+    annotators: ["blur", "label"]
+    config_overrides:
+      blur:
+        kernel_size: 25
+      label:
+        text_scale: 0.4
+        
+  # 分析模式
+  analysis:
+    name: "分析模式"
+    description: "用于深度分析的完整标注"
+    annotators: ["box", "label", "heatmap", "polygon"]
+    config_overrides:
+      box:
+        thickness: 3
+      heatmap:
+        opacity: 0.6
+        radius: 50
+      polygon:
+        thickness: 2
+        
+  # 分割模式
+  segmentation:
+    name: "分割模式"
+    description: "显示分割掩码和轮廓"
+    annotators: ["mask", "label", "polygon"]
+    config_overrides:
+      mask:
+        opacity: 0.7
+      polygon:
+        thickness: 2
+      label:
+        text_scale: 0.5
+        
+  # 演示模式
+  presentation:
+    name: "演示模式"
+    description: "适合演示的清晰标注"
+    annotators: ["box", "label"]
+    config_overrides:
+      box:
+        thickness: 4
+      label:
+        text_scale: 0.8
+        text_thickness: 2
+        text_padding: 8
+        
+  # 像素化隐私模式
+  pixelate_privacy:
+    name: "像素化隐私模式"
+    description: "使用像素化保护隐私"
+    annotators: ["pixelate", "label"]
+    config_overrides:
+      pixelate:
+        pixel_size: 30
+      label:
+        text_scale: 0.4
+        
+  # 完整模式
+  all:
+    name: "完整模式"
+    description: "启用所有标注器（仅用于测试）"
+    annotators: ["box", "label", "mask", "polygon", "heatmap", "blur", "pixelate"]
+    config_overrides:
+      box:
+        thickness: 2
+      mask:
+        opacity: 0.3
+      heatmap:
+        opacity: 0.5
+      blur:
+        kernel_size: 10
+      pixelate:
+        pixel_size: 15
+
+# 颜色配置
+colors:
+  # 默认颜色调色板
+  default_palette: "default"  # default, bright, pastel, dark
+  
+  # 自定义颜色
+  custom_colors:
+    person: [255, 0, 0]      # 红色
+    vehicle: [0, 255, 0]     # 绿色
+    animal: [0, 0, 255]      # 蓝色
+    object: [255, 255, 0]    # 黄色
+    
+  # 特殊用途颜色
+  special_colors:
+    warning: [255, 165, 0]   # 橙色
+    danger: [255, 0, 0]      # 红色
+    safe: [0, 255, 0]        # 绿色
+    neutral: [128, 128, 128] # 灰色
+
+# 性能配置
+performance:
+  # 热力图相关
+  heatmap:
+    max_frames: 100          # 最大历史帧数
+    update_interval: 5       # 更新间隔（帧）
+    memory_limit_mb: 500     # 内存限制（MB）
+    
+  # 实时处理
+  realtime:
+    max_fps: 30              # 最大FPS
+    skip_frames: 0           # 跳帧数（0表示不跳帧）
+    async_processing: false  # 异步处理
+    
+  # 批处理
+  batch:
+    max_batch_size: 10       # 最大批处理大小
+    parallel_workers: 4      # 并行工作线程数
+    
+  # 内存管理
+  memory:
+    auto_cleanup: true       # 自动清理
+    cleanup_interval: 100    # 清理间隔（帧）
+    max_memory_mb: 1024      # 最大内存使用（MB）
+
+# 输出配置
+output:
+  # 图像保存
+  image:
+    format: "jpg"            # 输出格式：jpg, png, bmp
+    quality: 95              # 图像质量（1-100）
+    compression: true        # 是否压缩
+    
+  # 视频保存
+  video:
+    codec: "mp4v"           # 视频编码器
+    fps: 30                 # 输出FPS
+    bitrate: 5000           # 比特率（kbps）
+    
+  # 统计信息
+  statistics:
+    save_stats: true        # 保存统计信息
+    stats_format: "json"    # 统计格式：json, csv, yaml
+    include_timestamps: true # 包含时间戳
+
+# 用户界面配置
+ui:
+  # 控制面板
+  control_panel:
+    show_fps: true          # 显示FPS
+    show_stats: true        # 显示统计信息
+    show_presets: true      # 显示预设选择
+    
+  # 快捷键
+  hotkeys:
+    toggle_box: "1"         # 切换边界框
+    toggle_label: "2"       # 切换标签
+    toggle_mask: "3"        # 切换掩码
+    toggle_polygon: "4"     # 切换多边形
+    toggle_heatmap: "5"     # 切换热力图
+    toggle_blur: "6"        # 切换模糊
+    toggle_pixelate: "7"    # 切换像素化
+    preset_basic: "F1"      # 基础预设
+    preset_detailed: "F2"   # 详细预设
+    preset_privacy: "F3"    # 隐私预设
+    preset_analysis: "F4"   # 分析预设
+    
+  # 显示选项
+  display:
+    show_confidence: true   # 显示置信度
+    confidence_decimals: 2  # 置信度小数位数
+    show_class_id: false    # 显示类别ID
+    show_track_id: false    # 显示跟踪ID
+
+# 兼容性配置
+compatibility:
+  # Supervision 版本
+  supervision_version: "0.26.1"
+  
+  # 模型兼容性
+  models:
+    yolo_detection: true    # YOLO 检测模型
+    yolo_segmentation: true # YOLO 分割模型
+    custom_models: true     # 自定义模型
+    
+  # 数据格式
+  formats:
+    ultralytics: true       # Ultralytics 格式
+    inference: true         # Inference 格式
+    transformers: true      # Transformers 格式
+
+# 调试配置
+debug:
+  enabled: false           # 启用调试模式
+  log_level: "INFO"        # 日志级别：DEBUG, INFO, WARNING, ERROR
+  save_debug_images: false # 保存调试图像
+  show_processing_time: false # 显示处理时间
+  verbose_logging: false   # 详细日志
+  
+# 实验性功能
+experimental:
+  enabled: false           # 启用实验性功能
+  
+  # 动态标注器
+  dynamic_annotators:
+    enabled: false
+    auto_adjust_thickness: false
+    auto_adjust_opacity: false
+    
+  # 智能预设
+  smart_presets:
+    enabled: false
+    auto_select_preset: false
+    scene_analysis: false
+    
+  # 高级效果
+  advanced_effects:
+    enabled: false
+    shadow_effects: false
+    glow_effects: false
+    animation_effects: false

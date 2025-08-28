@@ -4,6 +4,7 @@
 Supervision 功能包装器
 为 YOLOvision Pro 提供增强的可视化和分析功能
 支持小目标检测的 InferenceSlicer 功能
+集成多种标注器管理功能
 """
 
 import cv2
@@ -14,20 +15,40 @@ import logging
 from pathlib import Path
 import time
 
+# 导入标注器管理模块
+try:
+    from .supervision_annotators import AnnotatorManager, AnnotatorType, AnnotatorPresets
+except ImportError:
+    # 如果相对导入失败，尝试绝对导入
+    import sys
+    sys.path.append(str(Path(__file__).parent))
+    from supervision_annotators import AnnotatorManager, AnnotatorType, AnnotatorPresets
+
 
 class SupervisionWrapper:
-    """Supervision 功能统一包装器，支持小目标检测"""
+    """Supervision 功能统一包装器，支持小目标检测和多种标注器"""
 
-    def __init__(self, class_names: Optional[List[str]] = None):
+    def __init__(self, class_names: Optional[List[str]] = None,
+                 annotator_config_path: Optional[str] = None):
         """
         初始化 Supervision 包装器
 
         Args:
             class_names: 类别名称列表
+            annotator_config_path: 标注器配置文件路径
         """
         self.class_names = class_names or []
 
-        # 初始化标注器 (适配 Supervision 0.26.1+ API)
+        # 初始化标注器管理器
+        config_path = annotator_config_path or str(Path(__file__).parent.parent.parent / "assets/configs/annotator_config.yaml")
+        try:
+            self.annotator_manager = AnnotatorManager(config_path)
+            logging.info("标注器管理器初始化成功")
+        except Exception as e:
+            logging.warning(f"标注器管理器初始化失败: {e}，使用基础标注器")
+            self.annotator_manager = None
+
+        # 保持向后兼容的基础标注器 (适配 Supervision 0.26.1+ API)
         try:
             # 尝试新版本 API
             self.box_annotator = sv.BoxAnnotator(thickness=2)
@@ -63,7 +84,7 @@ class SupervisionWrapper:
             'thread_workers': 1  # 线程数
         }
 
-        logging.info("Supervision 包装器初始化完成（支持小目标检测）")
+        logging.info("Supervision 包装器初始化完成（支持小目标检测和多种标注器）")
     
     def process_ultralytics_results(self, results, image: np.ndarray) -> Dict[str, Any]:
         """
@@ -134,24 +155,29 @@ class SupervisionWrapper:
         
         return labels
     
-    def _create_enhanced_visualization(self, image: np.ndarray, 
-                                     detections: sv.Detections, 
+    def _create_enhanced_visualization(self, image: np.ndarray,
+                                     detections: sv.Detections,
                                      labels: List[str]) -> np.ndarray:
         """创建增强的可视化效果"""
-        
+
+        # 如果有标注器管理器，使用它进行标注
+        if self.annotator_manager:
+            return self.annotator_manager.annotate_image(image, detections, labels)
+
+        # 否则使用基础标注器（向后兼容）
         # 添加边界框
         annotated_image = self.box_annotator.annotate(
             scene=image,
             detections=detections
         )
-        
+
         # 添加标签
         annotated_image = self.label_annotator.annotate(
             scene=annotated_image,
             detections=detections,
             labels=labels
         )
-        
+
         return annotated_image
     
     def _calculate_statistics(self, detections: sv.Detections) -> Dict[str, Any]:
@@ -584,6 +610,125 @@ class SupervisionWrapper:
         merged_detections = merged_detections.with_nms(threshold=iou_threshold)
 
         return merged_detections
+
+    # ==================== 新增标注器管理方法 ====================
+
+    def set_annotator_preset(self, preset_name: str):
+        """设置标注器预设"""
+        if self.annotator_manager:
+            self.annotator_manager.set_preset(preset_name)
+            logging.info(f"已设置标注器预设: {preset_name}")
+        else:
+            logging.warning("标注器管理器未初始化，无法设置预设")
+
+    def enable_annotator(self, annotator_type: str):
+        """启用指定标注器"""
+        if self.annotator_manager:
+            try:
+                annotator_enum = AnnotatorType(annotator_type)
+                self.annotator_manager.enable_annotator(annotator_enum)
+            except ValueError:
+                logging.error(f"未知的标注器类型: {annotator_type}")
+        else:
+            logging.warning("标注器管理器未初始化")
+
+    def disable_annotator(self, annotator_type: str):
+        """禁用指定标注器"""
+        if self.annotator_manager:
+            try:
+                annotator_enum = AnnotatorType(annotator_type)
+                self.annotator_manager.disable_annotator(annotator_enum)
+            except ValueError:
+                logging.error(f"未知的标注器类型: {annotator_type}")
+        else:
+            logging.warning("标注器管理器未初始化")
+
+    def toggle_annotator(self, annotator_type: str):
+        """切换标注器状态"""
+        if self.annotator_manager:
+            try:
+                annotator_enum = AnnotatorType(annotator_type)
+                self.annotator_manager.toggle_annotator(annotator_enum)
+            except ValueError:
+                logging.error(f"未知的标注器类型: {annotator_type}")
+        else:
+            logging.warning("标注器管理器未初始化")
+
+    def get_enabled_annotators(self) -> List[str]:
+        """获取已启用的标注器列表"""
+        if self.annotator_manager:
+            return self.annotator_manager.get_enabled_annotators()
+        else:
+            return ["box", "label"]  # 默认启用的标注器
+
+    def get_annotator_info(self) -> Dict[str, Any]:
+        """获取标注器信息"""
+        if self.annotator_manager:
+            return self.annotator_manager.get_annotator_info()
+        else:
+            return {
+                'available_annotators': ["box", "label"],
+                'enabled_annotators': ["box", "label"],
+                'total_annotators': 2,
+                'enabled_count': 2,
+                'presets': ['basic']
+            }
+
+    def create_annotated_comparison(self, image: np.ndarray, detections: sv.Detections,
+                                  labels: Optional[List[str]] = None) -> np.ndarray:
+        """创建标注对比视图"""
+        if self.annotator_manager:
+            return self.annotator_manager.create_comparison_view(image, detections, labels)
+        else:
+            # 使用基础方法创建对比视图
+            return self.create_comparison_view(image, self._create_enhanced_visualization(image, detections, labels or []))
+
+    def update_annotator_config(self, annotator_type: str, **kwargs):
+        """更新标注器配置"""
+        if self.annotator_manager:
+            try:
+                annotator_enum = AnnotatorType(annotator_type)
+                self.annotator_manager.update_annotator_config(annotator_enum, **kwargs)
+            except ValueError:
+                logging.error(f"未知的标注器类型: {annotator_type}")
+        else:
+            logging.warning("标注器管理器未初始化，无法更新配置")
+
+    def clear_heatmap_history(self):
+        """清除热力图历史数据"""
+        if self.annotator_manager:
+            self.annotator_manager.clear_heatmap_history()
+        else:
+            logging.warning("标注器管理器未初始化")
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """获取性能统计信息"""
+        base_stats = {
+            'small_object_detection': {
+                'slice_config': self.small_object_config,
+                'enabled': True
+            }
+        }
+
+        if self.annotator_manager:
+            annotator_stats = self.annotator_manager.get_performance_stats()
+            base_stats['annotators'] = annotator_stats
+
+        return base_stats
+
+    def save_annotator_config(self, config_path: Optional[str] = None):
+        """保存标注器配置"""
+        if self.annotator_manager:
+            self.annotator_manager.save_config(config_path)
+        else:
+            logging.warning("标注器管理器未初始化，无法保存配置")
+
+    def get_available_presets(self) -> List[Dict[str, Any]]:
+        """获取可用的预设配置"""
+        if self.annotator_manager:
+            return AnnotatorPresets.get_all_presets()
+        else:
+            return [{'name': 'basic', 'description': '基础模式', 'annotators': ['box', 'label']}]
 
 
 class SupervisionAnalyzer:
