@@ -241,15 +241,43 @@ class SupervisionWrapper:
                 results = model.predict(image_slice, conf=conf, iou=iou, verbose=False)
                 return sv.Detections.from_ultralytics(results[0])
 
-            # 创建 InferenceSlicer
-            slicer = sv.InferenceSlicer(
-                callback=callback,
-                slice_wh=slice_wh,
-                overlap_wh=overlap_wh,
-                iou_threshold=self.small_object_config['iou_threshold'],
-                overlap_filter=self.small_object_config['overlap_filter'],
-                thread_workers=self.small_object_config['thread_workers']
-            )
+            # 创建 InferenceSlicer (兼容不同版本 API)
+            # 尝试检测支持的参数
+            import inspect
+            slicer_signature = inspect.signature(sv.InferenceSlicer.__init__)
+            slicer_params = list(slicer_signature.parameters.keys())
+
+            if 'overlap_wh' in slicer_params and 'overlap_ratio_wh' not in slicer_params:
+                # 新版本 API (supervision >= 0.27.0) - 只支持 overlap_wh
+                slicer = sv.InferenceSlicer(
+                    callback=callback,
+                    slice_wh=slice_wh,
+                    overlap_wh=overlap_wh,
+                    iou_threshold=self.small_object_config['iou_threshold'],
+                    overlap_filter=self.small_object_config['overlap_filter'],
+                    thread_workers=self.small_object_config['thread_workers']
+                )
+            elif 'overlap_ratio_wh' in slicer_params:
+                # 旧版本 API (supervision < 0.27.0) - 使用 overlap_ratio_wh
+                # 计算重叠比例
+                overlap_ratio_w = overlap_wh[0] / slice_wh[0] if slice_wh[0] > 0 else 0.2
+                overlap_ratio_h = overlap_wh[1] / slice_wh[1] if slice_wh[1] > 0 else 0.2
+
+                slicer = sv.InferenceSlicer(
+                    callback=callback,
+                    slice_wh=slice_wh,
+                    overlap_ratio_wh=(overlap_ratio_w, overlap_ratio_h),
+                    iou_threshold=self.small_object_config['iou_threshold'],
+                    overlap_filter=self.small_object_config['overlap_filter'],
+                    thread_workers=self.small_object_config['thread_workers']
+                )
+            else:
+                # 回退到最基本的参数
+                slicer = sv.InferenceSlicer(
+                    callback=callback,
+                    slice_wh=slice_wh,
+                    iou_threshold=self.small_object_config['iou_threshold']
+                )
 
             # 记录开始时间
             start_time = time.time()
