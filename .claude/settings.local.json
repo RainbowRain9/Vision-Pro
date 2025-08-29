@@ -24,11 +24,13 @@
       "Bash(set:*)",
       "Bash(powershell:*)",
       "Bash(md:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Read(D:\\/**)",
+      "Bash(claude mcp:*)"
     ],
     "deny": [],
     "additionalDirectories": [
-      "D:\\d\\Code"
+      "D:\\Code"
     ]
   },
   "enableAllProjectMcpServers": true,

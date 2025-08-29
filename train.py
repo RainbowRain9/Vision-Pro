@@ -22,8 +22,20 @@ from ultralytics import YOLO
 # model = YOLO(model="yolov8s-p2-repvgg.yaml")  # yolov8s+repvgg
 model = YOLO(model="assets/configs/yolov8s-drone.yaml")  # yolov8s+repvgg+sf
 
-# model.load('yolov8s.pt')  # 论文未加载预训练权重
+model.load('models/yolov8s.pt')  # 加载预训练权重，提升训练效果
 # Use the model
-model.train(data="data/visdrone_yolo/data.yaml", imgsz=640, epochs=300, workers=8, batch=8, cache=True, project='runs/train')
+# CPU 训练优化参数
+model.train(
+    data="data/visdrone_yolo/data.yaml", 
+    imgsz=416,      # 降低输入尺寸
+    epochs=50,      # 减少训练轮次
+    workers=4,      # 减少工作进程
+    batch=2,        # 大幅减少批次大小
+    cache=False,    # 关闭缓存节省内存
+    device='cpu',   # 明确指定 CPU
+    patience=10,    # 早停机制，10轮无改善自动停止
+    save_period=5,  # 每5轮保存一次检查点
+    project='runs/train'
+)
 # path = model.export(format="onnx", dynamic=True)  # export the mode l to ONNX format
 
