@@ -118,7 +118,6 @@ $RECYCLE.BIN/
 *.prototxt
 
 # 训练输出和运行结果
-runs/
 outputs/logs/
 outputs/models/*.pt
 outputs/models/*.pth
