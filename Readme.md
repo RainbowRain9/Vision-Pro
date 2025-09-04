@@ -44,7 +44,7 @@ YOLOvision Pro 是一个完整的YOLO目标检测解决方案，专注于小目�
 项目采用模块化的目录结构，便于开发、实验和部署：
 
 ```
-yolovision_pro/
+Vision-Pro/
 ├── 📄 main.py                   # 主程序入口，实现UI界面
 ├── 🚀 train.py                  # 模型训练脚本
 ├── 📚 docs/                     # 文档目录

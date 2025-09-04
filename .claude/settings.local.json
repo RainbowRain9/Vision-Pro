@@ -26,7 +26,21 @@
       "Bash(md:*)",
       "Bash(git remote set-url:*)",
       "Read(D:\\/**)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "Bash(source:*)",
+      "Bash(echo $VIRTUAL_ENV)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/validation/simple_check.py:*)",
+      "Bash(python:*)",
+      "Bash(pip uninstall:*)",
+      "Bash(nvidia-smi:*)",
+      "Bash(conda install:*)",
+      "Bash(top:*)",
+      "Bash(cat:*)",
+      "Bash(ps:*)",
+      "Bash(echo:*)",
+      "Bash(export:*)",
+      "Bash(ldd:*)"
     ],
     "deny": [],
     "additionalDirectories": [
